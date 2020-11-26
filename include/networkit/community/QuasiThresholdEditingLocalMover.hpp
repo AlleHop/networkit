@@ -23,6 +23,7 @@ public:
 
     Graph getQuasiThresholdGraph() const;
     count getNumberOfEdits() const;
+    count getWeightOfEdits() const;
     count getUsedIterations() const;
     count getPlateauSize() const;
     count getRootEqualBestParents() const;
@@ -46,6 +47,7 @@ private:
 
     count usedIterations;
     count numEdits;
+    count weightEdits;
     count plateauSize;
     count rootEqualBestParents;
 

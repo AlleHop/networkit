@@ -1119,6 +1119,7 @@ cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>":
 	cdef cppclass _QuasiThresholdEditingLocalMover "NetworKit::QuasiThresholdMoving::QuasiThresholdEditingLocalMover"(_Algorithm):
 		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost) except +
 		count getNumberOfEdits() const
+		count getWeightOfEdits() const
 		count getUsedIterations() const
 		count getPlateauSize() const
 		_Graph getQuasiThresholdGraph() except +
@@ -1140,6 +1141,9 @@ cdef class QuasiThresholdEditingLocalMover(Algorithm):
 
 	def getNumberOfEdits(self):
 		return (<_QuasiThresholdEditingLocalMover *>(self._this)).getNumberOfEdits()
+
+	def getWeightOfEdits(self):
+		return (<_QuasiThresholdEditingLocalMover *>(self._this)).getWeightOfEdits()
 
 	def getUsedIterations(self):
 		return (<_QuasiThresholdEditingLocalMover *>(self._this)).getUsedIterations()

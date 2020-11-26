@@ -24,6 +24,8 @@ public:
 
     count getNumberOfEdits() const { return numEdits; };
 
+    count getWeightOfEdits() const { return weightEdits; };
+
     count getUsedIterations() const { return usedIterations; };
 
     count getPlateauSize() const { return actualMaximumPlateau; };
@@ -136,6 +138,7 @@ private:
     count removeEditCost;
 
     count numEdits;
+    count weightEdits;
 
     Aux::SignalHandler handler;
     DynamicForest dynamicForest;
@@ -158,7 +161,9 @@ private:
     TraversalData rootData;
 
     count bestEdits;
+    count bestEditsWeight;
     count curEdits;
+    count curEditsWeight;
     node curParent;
     std::vector<node> curChildren;
     std::vector<node> bestChildren;
@@ -186,6 +191,7 @@ private:
     void processNode(node u, node nodeToMove, count generation);
     void compareWithQuadratic(node nodeToMove, count generation) const;
     count countNumberOfEdits() const;
+    count countWeightOfEdits() const;
     count editsIncidentTo(node u) const;
 
     bool logRandomBool(double logProbability) {

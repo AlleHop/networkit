@@ -27,6 +27,7 @@ EditingRunner::EditingRunner(const Graph &G,
 
     runningInfo["time"] = std::vector<count>();
     runningInfo["edits"] = std::vector<count>();
+    runningInfo["edits_weight"] = std::vector<count>();
     runningInfo["nodes_moved"] = std::vector<count>();
 
     if (Aux::PerfEventCountHardware::is_available) {
@@ -100,6 +101,7 @@ EditingRunner::EditingRunner(const Graph &G,
     }
 
     numEdits = countNumberOfEdits();
+    weightEdits = countWeightOfEdits();
     editsBefore = numEdits;
 
     G.forNodes([&](node u) { lastVisitedDFSNode[u] = u; });
@@ -122,6 +124,7 @@ void EditingRunner::runLocalMover() {
     handler.assureRunning();
     if (!insertRun) {
         runningInfo["edits"].push_back(numEdits);
+        runningInfo["edits_weight"].push_back(weightEdits);
     }
     count generation = 0;
     for (count i = insertRun ? 0 : 1; hasMoved && i <= maxIterations; ++i) {
@@ -168,9 +171,11 @@ void EditingRunner::runLocalMover() {
             }
         }
         runningInfo["edits"].push_back(numEdits);
+        runningInfo["edits_weight"].push_back(weightEdits);
         usedIterations = i;
 
         assert(numEdits == countNumberOfEdits());
+        assert(weightEdits == countWeightOfEdits());
         if (numEdits == editsBefore) {
             currentPlateau++;
         } else {
@@ -192,6 +197,7 @@ Graph EditingRunner::getQuasiThresholdGraph() const {
 
 void EditingRunner::localMove(node nodeToMove, count generation) {
     assert(numEdits == countNumberOfEdits());
+    assert(weightEdits == countWeightOfEdits());
     TRACE("Move node ", nodeToMove);
     handler.assureRunning();
     numNeighbors = 0;
@@ -210,8 +216,13 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         curParent = dynamicForest.parent(nodeToMove);
     }
     //TODO: remove max depth optimization for weighted
-    maxDepth = 2 * numNeighbors;
+    maxDepth = none;
+    if(insertEditCost == 1 || removeEditCost == 1){
+        maxDepth = 2 * numNeighbors;
+    }
+
     //TODO: multiply with weights
+    curEditsWeight = removeEditCost * numNeighbors;
     curEdits = numNeighbors;
 
     if (!insertRun) {
@@ -223,10 +234,13 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
                 if (c != nodeToMove) {
                     //TODO weights
                     curEdits += 1 - 2 * marker[c];
+                    curEditsWeight += 1 * insertEditCost - 2 * marker[c] * removeEditCost;
                 }
             },
             [](node) {});
-        dynamicForest.forAncestors(nodeToMove, [&](node p) { curEdits += 1 - 2 * marker[p];//TODO weights
+        dynamicForest.forAncestors(nodeToMove, [&](node p) {
+            curEdits += 1 - 2 * marker[p];
+            curEditsWeight += 1  * insertEditCost - 2 * marker[p] * removeEditCost;//TODO weights
          });
     }
 
@@ -310,6 +324,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     }
 
     bestEdits = numNeighbors - rootData.scoreMax;
+    bestEditsWeight = numNeighbors * insertEditCost - rootData.scoreMax;
 
     // If sortPaths and randomness is on, only adopt children when the chosen parent is the
     // lower end of its path.
@@ -392,6 +407,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     // calculate the number of saved edits as comparing the absolute number of edits doesn't make
     // sense
     count savedEdits = curEdits - bestEdits;
+    count savedEditsWeight = curEditsWeight - bestEditsWeight;
 
     // cleanup for linear move
     for (node u : touchedNodes) {
@@ -418,13 +434,16 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         hasMoved |= (savedEdits > 0 || (randomness && rootEqualBestParentsCpy > 1));
         numNodesMoved += (savedEdits > 0 || (randomness && rootEqualBestParentsCpy > 1));
         numEdits -= savedEdits;
+        weightEdits -=savedEditsWeight;
 #ifndef NDEBUG
         assert(numEdits == countNumberOfEdits());
+        assert(weightEdits == countWeightOfEdits());
 #endif
     } else {
         dynamicForest.moveToPosition(nodeToMove, curParent, curChildren);
 #ifndef NDEBUG
         assert(numEdits == countNumberOfEdits());
+        assert(weightEdits == countWeightOfEdits());
 #endif
     }
 }
@@ -766,6 +785,38 @@ count EditingRunner::countNumberOfEdits() const {
     });
 
     return numMissingEdges + (G.numberOfEdges() - numExistingEdges);
+}
+
+count EditingRunner::countWeightOfEdits() const {
+    // count weight of edits that are needed with the initial given forest
+    count numExistingEdges = 0;
+    count numMissingEdges = 0;
+    std::vector<bool> marker(G.upperNodeIdBound());
+
+    dynamicForest.forChildrenOf(none, [&](node r) {
+        count depth = 0;
+        dynamicForest.dfsFrom(
+            r,
+            [&](node u) { // on enter
+                count upperNeighbors = 0;
+
+                G.forNeighborsOf(u, [&](node v) {
+                    if (marker[v])
+                        ++upperNeighbors;
+                });
+
+                numExistingEdges += upperNeighbors;
+                numMissingEdges += depth - upperNeighbors;
+                marker[u] = true;
+                depth += 1;
+            },
+            [&](node u) { // on exit
+                marker[u] = false;
+                depth -= 1;
+            });
+    });
+
+    return ((numMissingEdges * insertEditCost) + ((G.numberOfEdges() - numExistingEdges) * removeEditCost));
 }
 
 count EditingRunner::editsIncidentTo(node u) const {

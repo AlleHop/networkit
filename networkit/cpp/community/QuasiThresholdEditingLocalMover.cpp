@@ -9,7 +9,7 @@ QuasiThresholdEditingLocalMover::QuasiThresholdEditingLocalMover(
     bool randomness, count maxPlateauSize, bool useBucketQueue, count insertEditCost, count removeEditCost)
     : G(G), initialization(initialization), maxIterations(maxIterations), sortPaths(sortPaths),
       randomness(randomness), maxPlateauSize(maxPlateauSize), useBucketQueue(useBucketQueue), insertEditCost(insertEditCost), removeEditCost(removeEditCost),
-      usedIterations(0), numEdits(0), rootEqualBestParents(0) {}
+      usedIterations(0), numEdits(0), weightEdits(0), rootEqualBestParents(0) {}
 
 void QuasiThresholdEditingLocalMover::run() {
     EditingRunner runner(G, initialization, maxIterations, sortPaths, randomness, maxPlateauSize,
@@ -17,6 +17,7 @@ void QuasiThresholdEditingLocalMover::run() {
     runner.runLocalMover();
     usedIterations = runner.getUsedIterations();
     numEdits = runner.getNumberOfEdits();
+    weightEdits = runner.getWeightOfEdits();
     plateauSize = runner.getPlateauSize();
     rootEqualBestParents = runner.getRootEqualBestParents();
     quasiThresholdGraph = runner.getQuasiThresholdGraph();
@@ -32,6 +33,11 @@ Graph QuasiThresholdEditingLocalMover::getQuasiThresholdGraph() const {
 count QuasiThresholdEditingLocalMover::getNumberOfEdits() const {
     assureFinished();
     return numEdits;
+}
+
+count QuasiThresholdEditingLocalMover::getWeightOfEdits() const {
+    assureFinished();
+    return weightEdits;
 }
 
 count QuasiThresholdEditingLocalMover::getUsedIterations() const {
