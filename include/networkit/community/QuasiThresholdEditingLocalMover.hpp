@@ -16,7 +16,8 @@ public:
     QuasiThresholdEditingLocalMover(const Graph &G, Initialization initializarion = TRIVIAL,
                                     count maxIterations = 5, bool sortPaths = true,
                                     bool randomness = false, count maxPlateauSize = 4,
-                                    bool useBucketQueue = true);
+                                    bool useBucketQueue = true,
+                                    count insertEditCost = 1, count removeEditCost = 1);
 
     void run() override;
 
@@ -38,6 +39,8 @@ private:
     count maxPlateauSize;
     bool insertRun;
     bool useBucketQueue;
+    count insertEditCost;
+    count removeEditCost;
 
     std::vector<node> order;
 

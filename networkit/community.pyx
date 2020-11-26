@@ -1117,7 +1117,7 @@ cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>" nam
 cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>":
 
 	cdef cppclass _QuasiThresholdEditingLocalMover "NetworKit::QuasiThresholdMoving::QuasiThresholdEditingLocalMover"(_Algorithm):
-		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, count maxPlateauSize, bool_t useBucketQueue) except +
+		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost) except +
 		count getNumberOfEdits() const
 		count getUsedIterations() const
 		count getPlateauSize() const
@@ -1134,9 +1134,9 @@ cdef class QuasiThresholdEditingLocalMover(Algorithm):
 	AscDegreeInsert = _Initialization.ASC_DEGREE_INSERT
 	UserDefindedInsert = _Initialization.USER_DEFINED_INSERT
 
-	def __cinit__(self, Graph G, _Initialization initialization = _Initialization.TRIVIAL, count maxIterations = 5, bool_t sortPaths = True, bool_t randomness = False, count maxPlateauSize = 4, bool_t useBucketQueue = True):
+	def __cinit__(self, Graph G, _Initialization initialization = _Initialization.TRIVIAL, count maxIterations = 5, bool_t sortPaths = True, bool_t randomness = False, count maxPlateauSize = 4, bool_t useBucketQueue = True, count insertEditCost = 1, count removeEditCost = 1):
 		self._G = G
-		self._this = new _QuasiThresholdEditingLocalMover(G._this, initialization, maxIterations, sortPaths, randomness, maxPlateauSize, useBucketQueue)
+		self._this = new _QuasiThresholdEditingLocalMover(G._this, initialization, maxIterations, sortPaths, randomness, maxPlateauSize, useBucketQueue, insertEditCost, removeEditCost)
 
 	def getNumberOfEdits(self):
 		return (<_QuasiThresholdEditingLocalMover *>(self._this)).getNumberOfEdits()

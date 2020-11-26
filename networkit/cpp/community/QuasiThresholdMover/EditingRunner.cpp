@@ -13,12 +13,13 @@ namespace QuasiThresholdMoving {
 EditingRunner::EditingRunner(const Graph &G,
                              QuasiThresholdEditingLocalMover::Initialization initialization,
                              count maxIterations, bool sortPaths, bool randomness,
-                             count maxPlateauSize, bool useBucketQueue, std::vector<node> order)
+                             count maxPlateauSize, bool useBucketQueue, std::vector<node> order,
+                             count insertEditCost, count removeEditCost)
     : G(G), maxIterations(maxIterations), usedIterations(0), sortPaths(sortPaths),
       randomness(randomness), maxPlateauSize(maxPlateauSize),
       insertRun(initialization != QuasiThresholdEditingLocalMover::TRIVIAL
                 && initialization != QuasiThresholdEditingLocalMover::EDITING),
-      useBucketQueue(useBucketQueue), handler(), hasMoved(true),
+      useBucketQueue(useBucketQueue), insertEditCost(insertEditCost), removeEditCost(removeEditCost), handler(), hasMoved(true),
       marker(G.upperNodeIdBound(), false), lastVisitedDFSNode(G.upperNodeIdBound(), none),
       traversalData(G.upperNodeIdBound()), nodeTouched(G.upperNodeIdBound(), false), rootData(),
       existing(G.upperNodeIdBound(), !insertRun), rootEqualBestParentsCpy(0), currentPlateau(0),
@@ -208,8 +209,9 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         curChildren = dynamicForest.children(nodeToMove);
         curParent = dynamicForest.parent(nodeToMove);
     }
-
+    //TODO: remove max depth optimization for weighted
     maxDepth = 2 * numNeighbors;
+    //TODO: multiply with weights
     curEdits = numNeighbors;
 
     if (!insertRun) {
@@ -219,11 +221,13 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
             nodeToMove,
             [&](node c) {
                 if (c != nodeToMove) {
+                    //TODO weights
                     curEdits += 1 - 2 * marker[c];
                 }
             },
             [](node) {});
-        dynamicForest.forAncestors(nodeToMove, [&](node p) { curEdits += 1 - 2 * marker[p]; });
+        dynamicForest.forAncestors(nodeToMove, [&](node p) { curEdits += 1 - 2 * marker[p];//TODO weights
+         });
     }
 
     dynamicForest.isolate(nodeToMove);
@@ -444,9 +448,11 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
 
     traversalData[u].initialize(generation);
 
+    //TODO check if correct with weights
     int64_t sumPositiveEdits = traversalData[u].childCloseness;
     assert(traversalData[u].childCloseness >= 0);
 
+    //TODO: multiply with weight
     traversalData[u].childCloseness += marker[u];
     traversalData[u].childCloseness -=
         1 - marker[u]; // if (marker[u]) { ++traversalData[u].childCloseness; } else {
@@ -462,12 +468,14 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
         node c = dynamicForest.nextDFSNodeOnEnter(u, u);
 
         while (c != u) {
-
+            //resturcture if 
             if (!nodeTouched[c] || traversalData[c].childCloseness < 0) {
 
-                if (traversalData[u].childCloseness == 0 || dynamicForest.depth(c) > maxDepth) {
+                if (traversalData[u].childCloseness == 0 || dynamicForest.depth(c) > maxDepth) { //TODO depth check ausbauen wenn depth aufwendig
+                    //TODO minus close
                     traversalData[u].childCloseness = -1;
                 } else {
+                    //TODO: check for weghted case
                     --traversalData[u].childCloseness;
                 }
 
@@ -496,6 +504,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
 
     if (!randomness) {
         if (sumPositiveEdits > traversalData[u].scoreMax || traversalData[u].scoreMax == 0) {
+            //TODO check for weights
             traversalData[u].scoreMax = sumPositiveEdits;
             traversalData[u].bestParentBelow = u;
         }

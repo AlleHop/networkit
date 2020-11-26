@@ -17,7 +17,8 @@ class EditingRunner {
 public:
     EditingRunner(const Graph &G, QuasiThresholdEditingLocalMover::Initialization initialization,
                   count maxIterations, bool sortPaths, bool randomness, count maxPlateauSize,
-                  bool useBucketQueue, std::vector<node> order);
+                  bool useBucketQueue, std::vector<node> order,
+                  count insertEditCost, count removeEditCost);
 
     void runLocalMover();
 
@@ -131,6 +132,8 @@ private:
 
     bool insertRun;
     bool useBucketQueue;
+    count insertEditCost;
+    count removeEditCost;
 
     count numEdits;
 
