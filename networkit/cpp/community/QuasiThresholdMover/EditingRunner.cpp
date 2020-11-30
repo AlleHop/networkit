@@ -305,7 +305,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     }
 
     if (!randomness) {
-        if (rootData.childCloseness > rootData.scoreMax) {
+        if (rootData.childClosenessWeight > rootData.scoreMaxWeight) {
             rootData.bestParentBelow = none;
             rootData.scoreMax = rootData.childCloseness;
             rootData.scoreMaxWeight = rootData.childClosenessWeight;
@@ -313,13 +313,13 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     } else {
         bool coin = false;
         double ownWeight = rootData.numIndifferentChildren * std::log(2);
-        if (rootData.childCloseness > rootData.scoreMax || !rootData.hasChoices()) {
+        if (rootData.childClosenessWeight > rootData.scoreMaxWeight || !rootData.hasChoices()) {
             // INFO("root better");
             rootData.scoreMax = rootData.childCloseness;
             rootData.scoreMaxWeight = rootData.childClosenessWeight;
             rootData.logEqualBestChoices = ownWeight;
             coin = true;
-        } else if (rootData.childCloseness == rootData.scoreMax) {
+        } else if (rootData.childClosenessWeight == rootData.scoreMaxWeight) {
             ownWeight = rootData.calculateOwnWeightForEqualChoices();
             if (ownWeight > -std::numeric_limits<double>::infinity()) {
                 rootData.addLogChoices(ownWeight);
@@ -339,7 +339,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         bestEditsWeight = 0;
     } else{
         //TODO fix scoreMax for weighted edits
-        bestEditsWeight = (numNeighbors * insertEditCost )- (rootData.scoreMax * insertEditCost);
+        bestEditsWeight = (numNeighbors * insertEditCost )- (rootData.scoreMaxWeight);
     }
 
     // If sortPaths and randomness is on, only adopt children when the chosen parent is the
@@ -354,9 +354,9 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         std::vector<node> indifferentChildren;
         for (node u : touchedNodes) {
             if (u != nodeToMove && dynamicForest.parent(u) == rootData.bestParentBelow) {
-                if (traversalData[u].childCloseness > 0) {
+                if (traversalData[u].childClosenessWeight > 0) {
                     bestChildren.push_back(u);
-                } else if (randomness && traversalData[u].childCloseness == 0) {
+                } else if (randomness && traversalData[u].childClosenessWeight == 0) {
                     indifferentChildren.push_back(u);
                 }
             }
@@ -447,11 +447,12 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     neighbors.clear();
     touchedNodes.clear();
 
-    if (sortPaths || savedEdits > 0 || randomness) {
+    if (sortPaths || savedEditsWeight > 0 || randomness) {
         dynamicForest.moveToPosition(nodeToMove, rootData.bestParentBelow, bestChildren);
-        hasMoved |= (savedEdits > 0 || (randomness && rootEqualBestParentsCpy > 1));
-        numNodesMoved += (savedEdits > 0 || (randomness && rootEqualBestParentsCpy > 1));
-        numEdits -= savedEdits;
+        hasMoved |= (savedEditsWeight > 0 || (randomness && rootEqualBestParentsCpy > 1));
+        numNodesMoved += (savedEditsWeight > 0 || (randomness && rootEqualBestParentsCpy > 1));
+        if(numEdits <= savedEdits) {}
+        else { numEdits -= savedEdits;}
         //saved Edits too high
         if(weightEdits <= savedEditsWeight) {}
         else {weightEdits -= savedEditsWeight;}
@@ -503,31 +504,34 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
 
     TRACE("Edit difference before descending: ", traversalData[u].childCloseness);
 
-    assert(!marker[u] || traversalData[u].childCloseness > 0);
+    assert(!marker[u] || traversalData[u].childClosenessWeight > 0);
 
-    if (traversalData[u].childCloseness >= 0) {
+    if (traversalData[u].childClosenessWeight >= 0) {
         assert(lastVisitedDFSNode[u] == u);
 
         node c = dynamicForest.nextDFSNodeOnEnter(u, u);
 
         while (c != u) {
             //resturcture if 
-            if (!nodeTouched[c] || traversalData[c].childCloseness < 0) {
+            if (!nodeTouched[c] || traversalData[c].childClosenessWeight < 0) {
 
-                if (traversalData[u].childCloseness == 0 || dynamicForest.depth(c) > maxDepth) { //TODO depth check ausbauen wenn depth aufwendig
+                if (traversalData[u].childClosenessWeight == 0 || dynamicForest.depth(c) > maxDepth) { //TODO depth check ausbauen wenn depth aufwendig
                     //TODO minus close
                     traversalData[u].childCloseness = -1;
+                    //traversalData[u].childClosenessWeight = -1 * insertEditCost;
+                    //traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
                     traversalData[u].childClosenessWeight = -1 * insertEditCost;
                 } else {
-                    //TODO: check for weghted case
+                    //TODO: check for weighted case
                     --traversalData[u].childCloseness;
-                    traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
+                    //traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
+                    traversalData[u].childClosenessWeight -= insertEditCost;
                 }
 
                 // advance to the next starting point for the DFS search.
                 c = lastVisitedDFSNode[c];
 
-                if (traversalData[u].childCloseness < 0) {
+                if (traversalData[u].childClosenessWeight < 0) {
                     lastVisitedDFSNode[u] = c;
                     break;
                 }
@@ -548,7 +552,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     TRACE("Edit difference after descending: ", traversalData[u].childCloseness);
 
     if (!randomness) {
-        if (sumPositiveEdits > traversalData[u].scoreMax || traversalData[u].scoreMax == 0) {
+        if (sumPositiveEditsWeight > traversalData[u].scoreMaxWeight || traversalData[u].scoreMaxWeight == 0) {
             //TODO check for weights
             traversalData[u].scoreMax = sumPositiveEdits;
             traversalData[u].scoreMaxWeight = sumPositiveEditsWeight;
@@ -557,7 +561,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     } else {
         bool coin = false;
         double ownWeight = traversalData[u].numIndifferentChildren * std::log(2);
-        if (sumPositiveEdits > traversalData[u].scoreMax || !traversalData[u].hasChoices()) {
+        if (sumPositiveEditsWeight > traversalData[u].scoreMaxWeight || !traversalData[u].hasChoices()) {
             // INFO(u, " is better count = 1");
             traversalData[u].scoreMax = sumPositiveEdits;
             traversalData[u].scoreMaxWeight = sumPositiveEditsWeight;
@@ -566,7 +570,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
             // Otherwise, there must be a node below u that is at least as good.
             assert(!sortPaths || sumPositiveEdits == 0 || dynamicForest.isLowerEnd(u));
             coin = true;
-        } else if (sumPositiveEdits == traversalData[u].scoreMax) {
+        } else if (sumPositiveEditsWeight == traversalData[u].scoreMaxWeight) {
             ownWeight = traversalData[u].calculateOwnWeightForEqualChoices();
             if (ownWeight > -std::numeric_limits<double>::infinity()) {
                 traversalData[u].addLogChoices(ownWeight);
@@ -585,7 +589,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     traversalData[u].scoreMax += marker[u];
     traversalData[u].scoreMaxWeight += marker[u] * insertEditCost;
 
-    if (traversalData[u].scoreMax > 0) {
+    if (traversalData[u].scoreMaxWeight > 0) {
         traversalData[u].scoreMax -= 1 - marker[u];
         traversalData[u].scoreMaxWeight -= 1 *insertEditCost - marker[u] * insertEditCost;
     }
@@ -595,7 +599,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
 
     parentData.initialize(generation);
 
-    if ((traversalData[u].scoreMax > 0 || traversalData[u].childCloseness > 0) && p != none) {
+    if ((traversalData[u].scoreMaxWeight > 0 || traversalData[u].childClosenessWeight > 0) && p != none) {
         if (useBucketQueue) {
             assert(dynamicForest.depth(p) <= maxDepth);
         }
@@ -610,14 +614,14 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
         }
     }
 
-    if (traversalData[u].scoreMax > parentData.scoreMax) {
+    if (traversalData[u].scoreMaxWeight > parentData.scoreMaxWeight) {
         parentData.logEqualBestChoices = traversalData[u].logEqualBestChoices;
         parentData.scoreMax = traversalData[u].scoreMax;
         parentData.scoreMaxWeight = traversalData[u].scoreMaxWeight;
         parentData.bestParentBelow = traversalData[u].bestParentBelow;
         // INFO(u, " better for ", p);
         // INFO("set count to ", parentData.equalBestParents);
-    } else if (randomness && traversalData[u].scoreMax == parentData.scoreMax) {
+    } else if (randomness && traversalData[u].scoreMaxWeight == parentData.scoreMaxWeight) {
         parentData.addLogChoices(traversalData[u].logEqualBestChoices);
         if (logRandomBool(traversalData[u].logEqualBestChoices - parentData.logEqualBestChoices)) {
             parentData.bestParentBelow = traversalData[u].bestParentBelow;
@@ -627,8 +631,8 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
         // parentData.equalBestParents);
     }
 
-    if (traversalData[u].childCloseness >= 0) {
-        assert(traversalData[u].childCloseness <= traversalData[u].scoreMax);
+    if (traversalData[u].childClosenessWeight >= 0) {
+        assert(traversalData[u].childCloseness <= traversalData[u].scoreMaxWeight);
         parentData.childCloseness += traversalData[u].childCloseness;
         parentData.childClosenessWeight += traversalData[u].childClosenessWeight;
         if (traversalData[u].childCloseness == 0) {
