@@ -127,7 +127,9 @@ void EditingRunner::runLocalMover() {
         runningInfo["edits_weight"].push_back(weightEdits);
     }
     count generation = 0;
+    //Main loop; check if iteration moved a node and if max iterations were used
     for (count i = insertRun ? 0 : 1; hasMoved && i <= maxIterations; ++i) {
+        //check if iteration is on a plateau greater than maxPlateau size
         if (!hasMoved || (randomness && (currentPlateau >= maxPlateauSize)))
             break;
         handler.assureRunning();
@@ -139,7 +141,7 @@ void EditingRunner::runLocalMover() {
             ec.second.reset();
             ec.second.enable();
         }
-
+        //first run when inserting is enabled. insert all nodes in assigned order
         if (insertRun) {
             for (index j = 0; j < G.numberOfNodes(); j++) {
                 node nodeToMove = order[j];
@@ -148,6 +150,7 @@ void EditingRunner::runLocalMover() {
             }
             insertRun = 0;
         } else {
+            //local move in random order
             G.forNodesInRandomOrder([&](node nodeToMove) { localMove(nodeToMove, generation++); });
             INFO("Iteration: ", i, " edits: ", numEdits, " moved nodes: ", numNodesMoved);
         }
@@ -156,7 +159,7 @@ void EditingRunner::runLocalMover() {
         for (auto &ec : event_counters) {
             ec.second.disable();
         }
-
+        //update running info, time nodes moved, edits
         if (i == 0) {
             runningInfo["nodes_moved"][0] = numNodesMoved;
             runningInfo["time"][0] += timer.elapsedMicroseconds();
@@ -176,6 +179,7 @@ void EditingRunner::runLocalMover() {
 
         assert(numEdits == countNumberOfEdits());
         assert(weightEdits == countWeightOfEdits());
+        //update plateau
         if (numEdits == editsBefore) {
             currentPlateau++;
         } else {
@@ -215,14 +219,14 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         curChildren = dynamicForest.children(nodeToMove);
         curParent = dynamicForest.parent(nodeToMove);
     }
-    //TODO: remove max depth optimization for weighted
+    //remove max depth optimization for weighted TODO maybe replace to factor based on editCosts
     maxDepth = none;
-    if(insertEditCost == 1 || removeEditCost == 1){
+    if(insertEditCost == 1 && removeEditCost == 1){
         maxDepth = 2 * numNeighbors;
     }
 
     //TODO: multiply with weights
-    curEditsWeight = removeEditCost * numNeighbors;
+    curEditsWeight = insertEditCost * numNeighbors;
     curEdits = numNeighbors;
 
     if (!insertRun) {
@@ -232,29 +236,31 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
             nodeToMove,
             [&](node c) {
                 if (c != nodeToMove) {
-                    //TODO weights
+                    //for all children in dfs insert one edge; no insertion necessary if child is neighbor of nodeToMove
                     curEdits += 1 - 2 * marker[c];
-                    curEditsWeight += 1 * insertEditCost - 2 * marker[c] * removeEditCost;
+                    curEditsWeight += 1 * insertEditCost - marker[c] * (insertEditCost + insertEditCost);//TODO weights
                 }
             },
             [](node) {});
         dynamicForest.forAncestors(nodeToMove, [&](node p) {
+            //for all ancestors insert one edge; no insertion necessary if ancestor is neighbor of nodeToMove
             curEdits += 1 - 2 * marker[p];
-            curEditsWeight += 1  * insertEditCost - 2 * marker[p] * removeEditCost;//TODO weights
+            curEditsWeight += 1  * insertEditCost - marker[p] * (insertEditCost + insertEditCost);//TODO weights
          });
     }
-
+    //first step of algorithm; isolate node
     dynamicForest.isolate(nodeToMove);
-
+    //sort path optimization
     if (sortPaths) {
         for (node v : neighbors) {
             dynamicForest.moveUpNeighbor(v, nodeToMove);
         }
     }
-
+    //TODO ignore bucket queue for weighted because maxDepth is not limited
     if (useBucketQueue) {
         bucketQueue.fill(neighbors, dynamicForest);
     } else {
+        //put all neighbors in a queue and sort it based on forest depth
         for (node v : neighbors) {
             neighborQueue.emplace_back(v);
         }
@@ -273,13 +279,16 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         }
     } else {
         while (!currentLevel.empty() || !neighborQueue.empty()) {
+            //skip empty levels
             if (currentLevel.empty()) {
                 level = dynamicForest.depth(neighborQueue.back());
             }
+            //process nodes in currentLevel
             for (node u : currentLevel) {
                 assert(dynamicForest.depth(u) == level);
                 processNode(u, nodeToMove, generation);
             }
+            //process neighbors not in current level but in queue
             while (!neighborQueue.empty() && dynamicForest.depth(neighborQueue.back()) == level) {
                 node u = neighborQueue.back();
                 neighborQueue.pop_back();
@@ -299,6 +308,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         if (rootData.childCloseness > rootData.scoreMax) {
             rootData.bestParentBelow = none;
             rootData.scoreMax = rootData.childCloseness;
+            rootData.scoreMaxWeight = rootData.childClosenessWeight;
         }
     } else {
         bool coin = false;
@@ -306,6 +316,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         if (rootData.childCloseness > rootData.scoreMax || !rootData.hasChoices()) {
             // INFO("root better");
             rootData.scoreMax = rootData.childCloseness;
+            rootData.scoreMaxWeight = rootData.childClosenessWeight;
             rootData.logEqualBestChoices = ownWeight;
             coin = true;
         } else if (rootData.childCloseness == rootData.scoreMax) {
@@ -324,7 +335,12 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     }
 
     bestEdits = numNeighbors - rootData.scoreMax;
-    bestEditsWeight = numNeighbors * insertEditCost - rootData.scoreMax;
+    if((numNeighbors * insertEditCost )<= (rootData.scoreMaxWeight)){
+        bestEditsWeight = 0;
+    } else{
+        //TODO fix scoreMax for weighted edits
+        bestEditsWeight = (numNeighbors * insertEditCost )- (rootData.scoreMax * insertEditCost);
+    }
 
     // If sortPaths and randomness is on, only adopt children when the chosen parent is the
     // lower end of its path.
@@ -407,7 +423,9 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     // calculate the number of saved edits as comparing the absolute number of edits doesn't make
     // sense
     count savedEdits = curEdits - bestEdits;
+    //bestEdits zero because of error
     count savedEditsWeight = curEditsWeight - bestEditsWeight;
+    if(bestEditsWeight == 0) savedEditsWeight = savedEdits * insertEditCost;
 
     // cleanup for linear move
     for (node u : touchedNodes) {
@@ -434,7 +452,9 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         hasMoved |= (savedEdits > 0 || (randomness && rootEqualBestParentsCpy > 1));
         numNodesMoved += (savedEdits > 0 || (randomness && rootEqualBestParentsCpy > 1));
         numEdits -= savedEdits;
-        weightEdits -=savedEditsWeight;
+        //saved Edits too high
+        if(weightEdits <= savedEditsWeight) {}
+        else {weightEdits -= savedEditsWeight;}
 #ifndef NDEBUG
         assert(numEdits == countNumberOfEdits());
         assert(weightEdits == countWeightOfEdits());
@@ -469,6 +489,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
 
     //TODO check if correct with weights
     int64_t sumPositiveEdits = traversalData[u].childCloseness;
+    int64_t sumPositiveEditsWeight = traversalData[u].childClosenessWeight;
     assert(traversalData[u].childCloseness >= 0);
 
     //TODO: multiply with weight
@@ -476,6 +497,9 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     traversalData[u].childCloseness -=
         1 - marker[u]; // if (marker[u]) { ++traversalData[u].childCloseness; } else {
                        // --traversalData[u].childCloseness; }
+    traversalData[u].childClosenessWeight += marker[u] * insertEditCost;
+    traversalData[u].childClosenessWeight -=
+        1 * insertEditCost - marker[u] * insertEditCost;
 
     TRACE("Edit difference before descending: ", traversalData[u].childCloseness);
 
@@ -493,9 +517,11 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
                 if (traversalData[u].childCloseness == 0 || dynamicForest.depth(c) > maxDepth) { //TODO depth check ausbauen wenn depth aufwendig
                     //TODO minus close
                     traversalData[u].childCloseness = -1;
+                    traversalData[u].childClosenessWeight = -1 * insertEditCost;
                 } else {
                     //TODO: check for weghted case
                     --traversalData[u].childCloseness;
+                    traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
                 }
 
                 // advance to the next starting point for the DFS search.
@@ -525,6 +551,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
         if (sumPositiveEdits > traversalData[u].scoreMax || traversalData[u].scoreMax == 0) {
             //TODO check for weights
             traversalData[u].scoreMax = sumPositiveEdits;
+            traversalData[u].scoreMaxWeight = sumPositiveEditsWeight;
             traversalData[u].bestParentBelow = u;
         }
     } else {
@@ -533,6 +560,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
         if (sumPositiveEdits > traversalData[u].scoreMax || !traversalData[u].hasChoices()) {
             // INFO(u, " is better count = 1");
             traversalData[u].scoreMax = sumPositiveEdits;
+            traversalData[u].scoreMaxWeight = sumPositiveEditsWeight;
             traversalData[u].logEqualBestChoices = ownWeight;
             // Either we do not adopt children, or we are at the lower end of a path.
             // Otherwise, there must be a node below u that is at least as good.
@@ -555,9 +583,11 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     assert(traversalData[u].scoreMax >= 0);
 
     traversalData[u].scoreMax += marker[u];
+    traversalData[u].scoreMaxWeight += marker[u] * insertEditCost;
 
     if (traversalData[u].scoreMax > 0) {
         traversalData[u].scoreMax -= 1 - marker[u];
+        traversalData[u].scoreMaxWeight -= 1 *insertEditCost - marker[u] * insertEditCost;
     }
     TRACE("Maximum gain at ", u, ": ", traversalData[u].scoreMax);
     node p = dynamicForest.parent(u);
@@ -583,6 +613,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     if (traversalData[u].scoreMax > parentData.scoreMax) {
         parentData.logEqualBestChoices = traversalData[u].logEqualBestChoices;
         parentData.scoreMax = traversalData[u].scoreMax;
+        parentData.scoreMaxWeight = traversalData[u].scoreMaxWeight;
         parentData.bestParentBelow = traversalData[u].bestParentBelow;
         // INFO(u, " better for ", p);
         // INFO("set count to ", parentData.equalBestParents);
@@ -599,6 +630,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     if (traversalData[u].childCloseness >= 0) {
         assert(traversalData[u].childCloseness <= traversalData[u].scoreMax);
         parentData.childCloseness += traversalData[u].childCloseness;
+        parentData.childClosenessWeight += traversalData[u].childClosenessWeight;
         if (traversalData[u].childCloseness == 0) {
             ++parentData.numIndifferentChildren;
         } else {
@@ -816,7 +848,7 @@ count EditingRunner::countWeightOfEdits() const {
             });
     });
 
-    return ((numMissingEdges * insertEditCost) + ((G.numberOfEdges() - numExistingEdges) * removeEditCost));
+    return ((numMissingEdges * insertEditCost) + ((G.numberOfEdges() - numExistingEdges) * insertEditCost));
 }
 
 count EditingRunner::editsIncidentTo(node u) const {

@@ -41,6 +41,8 @@ private:
         count generation;
         int64_t scoreMax;
         int64_t childCloseness;
+        int64_t scoreMaxWeight;
+        int64_t childClosenessWeight;
         node bestParentBelow;
         /**
          * Logarithm of the number of equally good choices for this node.
@@ -52,7 +54,8 @@ private:
         count numCloseChildren;
 
         TraversalData()
-            : generation(none), scoreMax(0), childCloseness(0), bestParentBelow(none),
+            : generation(none), scoreMax(0), childCloseness(0), scoreMaxWeight(0),
+              childClosenessWeight(0), bestParentBelow(none),
               logEqualBestChoices(-std::numeric_limits<double>::infinity()),
               numIndifferentChildren(0), numCloseChildren(0){};
 
@@ -61,6 +64,8 @@ private:
                 generation = currentGeneration;
                 scoreMax = 0;
                 childCloseness = 0;
+                scoreMaxWeight = 0;
+                childClosenessWeight = 0;
                 bestParentBelow = none;
                 logEqualBestChoices = -std::numeric_limits<double>::infinity();
                 numIndifferentChildren = 0;
@@ -118,6 +123,8 @@ private:
             ss << "\n";
             ss << "scoreMax: " << scoreMax << "\n";
             ss << "childCloseness: " << childCloseness << "\n";
+            ss << "scoreMaxWeight: " << scoreMaxWeight << "\n";
+            ss << "childClosenessWeight: " << childClosenessWeight << "\n";
             ss << "logEqualBestChoices: " << logEqualBestChoices << "\n";
             ss << "bestParentBelow: " << bestParentBelow << "\n";
             return ss.str();
