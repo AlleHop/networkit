@@ -226,7 +226,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     }
 
     //TODO: multiply with weights
-    curEditsWeight = insertEditCost * numNeighbors;
+    curEditsWeight = removeEditCost * numNeighbors;
     curEdits = numNeighbors;
 
     if (!insertRun) {
@@ -238,14 +238,14 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
                 if (c != nodeToMove) {
                     //for all children in dfs insert one edge; no insertion necessary if child is neighbor of nodeToMove
                     curEdits += 1 - 2 * marker[c];
-                    curEditsWeight += 1 * insertEditCost - marker[c] * (insertEditCost + insertEditCost);//TODO weights
+                    curEditsWeight += 1 * insertEditCost - marker[c] * (removeEditCost + insertEditCost);//TODO weights
                 }
             },
             [](node) {});
         dynamicForest.forAncestors(nodeToMove, [&](node p) {
             //for all ancestors insert one edge; no insertion necessary if ancestor is neighbor of nodeToMove
             curEdits += 1 - 2 * marker[p];
-            curEditsWeight += 1  * insertEditCost - marker[p] * (insertEditCost + insertEditCost);//TODO weights
+            curEditsWeight += 1  * insertEditCost - marker[p] * (removeEditCost + insertEditCost);//TODO weights
          });
     }
     //first step of algorithm; isolate node
@@ -339,7 +339,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         bestEditsWeight = 0;
     } else{
         //TODO fix scoreMax for weighted edits
-        bestEditsWeight = (numNeighbors * insertEditCost )- (rootData.scoreMaxWeight);
+        bestEditsWeight = (numNeighbors * removeEditCost )- (rootData.scoreMaxWeight);
     }
 
     // If sortPaths and randomness is on, only adopt children when the chosen parent is the
@@ -852,7 +852,7 @@ count EditingRunner::countWeightOfEdits() const {
             });
     });
 
-    return ((numMissingEdges * insertEditCost) + ((G.numberOfEdges() - numExistingEdges) * insertEditCost));
+    return ((numMissingEdges * insertEditCost) + ((G.numberOfEdges() - numExistingEdges) * removeEditCost));
 }
 
 count EditingRunner::editsIncidentTo(node u) const {
