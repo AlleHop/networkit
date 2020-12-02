@@ -238,14 +238,14 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
                 if (c != nodeToMove) {
                     //for all children in dfs insert one edge; no insertion necessary if child is neighbor of nodeToMove
                     curEdits += 1 - 2 * marker[c];
-                    curEditsWeight += 1 * insertEditCost - marker[c] * (removeEditCost + insertEditCost);//TODO weights
+                    curEditsWeight += 1 * removeEditCost - marker[c] * (removeEditCost + removeEditCost);//TODO weights
                 }
             },
             [](node) {});
         dynamicForest.forAncestors(nodeToMove, [&](node p) {
             //for all ancestors insert one edge; no insertion necessary if ancestor is neighbor of nodeToMove
             curEdits += 1 - 2 * marker[p];
-            curEditsWeight += 1  * insertEditCost - marker[p] * (removeEditCost + insertEditCost);//TODO weights
+            curEditsWeight += 1  * removeEditCost - marker[p] * (removeEditCost + removeEditCost);//TODO weights
          });
     }
     //first step of algorithm; isolate node
@@ -335,12 +335,8 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     }
 
     bestEdits = numNeighbors - rootData.scoreMax;
-    if((numNeighbors * insertEditCost )<= (rootData.scoreMaxWeight)){
-        bestEditsWeight = 0;
-    } else{
-        //TODO fix scoreMax for weighted edits
-        bestEditsWeight = (numNeighbors * removeEditCost )- (rootData.scoreMaxWeight);
-    }
+    //TODO fix scoreMax for weighted edits
+    bestEditsWeight = (numNeighbors * removeEditCost )- (rootData.scoreMaxWeight);
 
     // If sortPaths and randomness is on, only adopt children when the chosen parent is the
     // lower end of its path.
@@ -425,7 +421,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     count savedEdits = curEdits - bestEdits;
     //bestEdits zero because of error
     count savedEditsWeight = curEditsWeight - bestEditsWeight;
-    if(bestEditsWeight == 0) savedEditsWeight = savedEdits * insertEditCost;
+    //if(bestEditsWeight == 0) savedEditsWeight = savedEdits * removeEditCost;
 
     // cleanup for linear move
     for (node u : touchedNodes) {
@@ -498,9 +494,9 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     traversalData[u].childCloseness -=
         1 - marker[u]; // if (marker[u]) { ++traversalData[u].childCloseness; } else {
                        // --traversalData[u].childCloseness; }
-    traversalData[u].childClosenessWeight += marker[u] * insertEditCost;
+    traversalData[u].childClosenessWeight += marker[u] * removeEditCost;
     traversalData[u].childClosenessWeight -=
-        1 * insertEditCost - marker[u] * insertEditCost;
+        1 * removeEditCost - marker[u] * removeEditCost;
 
     TRACE("Edit difference before descending: ", traversalData[u].childCloseness);
 
@@ -520,12 +516,12 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
                     traversalData[u].childCloseness = -1;
                     //traversalData[u].childClosenessWeight = -1 * insertEditCost;
                     //traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
-                    traversalData[u].childClosenessWeight = -1 * insertEditCost;
+                    traversalData[u].childClosenessWeight = -1 * removeEditCost;
                 } else {
                     //TODO: check for weighted case
                     --traversalData[u].childCloseness;
                     //traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
-                    traversalData[u].childClosenessWeight -= insertEditCost;
+                    traversalData[u].childClosenessWeight -= removeEditCost;
                 }
 
                 // advance to the next starting point for the DFS search.
@@ -587,11 +583,11 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     assert(traversalData[u].scoreMax >= 0);
 
     traversalData[u].scoreMax += marker[u];
-    traversalData[u].scoreMaxWeight += marker[u] * insertEditCost;
+    traversalData[u].scoreMaxWeight += marker[u] * removeEditCost;
 
     if (traversalData[u].scoreMaxWeight > 0) {
         traversalData[u].scoreMax -= 1 - marker[u];
-        traversalData[u].scoreMaxWeight -= 1 *insertEditCost - marker[u] * insertEditCost;
+        traversalData[u].scoreMaxWeight -= 1 *removeEditCost - marker[u] * removeEditCost;
     }
     TRACE("Maximum gain at ", u, ": ", traversalData[u].scoreMax);
     node p = dynamicForest.parent(u);
@@ -851,7 +847,7 @@ count EditingRunner::countWeightOfEdits() const {
                 depth -= 1;
             });
     });
-
+    TRACE("Missing Edges:  ", numMissingEdges,", NumEdges-ExistingEdges: " ,(G.numberOfEdges() - numExistingEdges));
     return ((numMissingEdges * insertEditCost) + ((G.numberOfEdges() - numExistingEdges) * removeEditCost));
 }
 

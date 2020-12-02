@@ -908,6 +908,70 @@ TEST_F(CommunityGTest, testInclusionMinimal) {
   }
 }
 
+TEST_F(CommunityGTest, testInclusionMinimalWeightedCost) {
+  Aux::Random::setSeed(37, false);
+  count minimum = 21;
+	Graph karate = METISGraphReader().read("input/karate.graph");
+  karate.indexEdges();
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(karate, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 0, true, false,4UL,false,1,2);
+  mover.run();
+  Graph Q = mover.getQuasiThresholdGraph();
+  count used = mover.getNumberOfEdits();
+  count usedWeight = mover.getWeightOfEdits();
+  assert(used >= minimum);
+  
+  std::vector<std::pair<std::pair<node, node>, bool>> edits;
+  for(node u = 0; u < karate.upperNodeIdBound(); u++){
+    for(node v = u+1; v < karate.upperNodeIdBound(); v++){
+      if(Q.hasEdge(u,v) && !karate.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 1));
+      }
+      if(!Q.hasEdge(u,v) && karate.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 0));
+      }
+    }
+  }
+  
+  assert(edits.size() == used);
+  
+  
+  count pow_set_size = pow(2, used-minimum);
+  INFO(used-minimum, " edits away from minimum");
+  INFO("Testing ", pow_set_size, " subsets");
+  count counter, j;
+  Graph G;
+  for(counter = 1; counter < pow_set_size; counter++) {
+    G = Q;
+    for(j = 0; j < edits.size(); j++) {
+      if(counter & (1 << j)){
+        if(edits[j].second){
+          G.removeEdge(edits[j].first.first, edits[j].first.second);
+        } else {
+          G.addEdge(edits[j].first.first, edits[j].first.second);
+        }
+      }
+    }
+    G.indexEdges();
+
+    QuasiThresholdMoving::QuasiThresholdEditingLinear editing(G);
+    editing.run();
+    Graph G1 = editing.getQuasiThresholdGraph();
+    bool difference = false;
+    G.forNodes([&](node u){
+      G1.forNodes([&](node v){
+        if(G.hasEdge(u,v) != G1.hasEdge(u,v)){
+          difference = true;
+          return;
+        }
+      });
+    });
+    assert(difference);
+    INFO("OK ---- Removing edits broke QTG property");
+    INFO(used, " Number of Edits");
+    INFO(usedWeight, " Weight of Edits");
+    
+  }
+}
 
 TEST_F(CommunityGTest, testRandomness) {
   /*  o - x - o
@@ -1123,19 +1187,19 @@ TEST_F(CommunityGTest, testQuasiThresholdDeletedNodes) {
   G.indexEdges();
   QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover2(G, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 5, true, false);
   mover2.run();
-  EXPECT_EQ(0, mover2.getNumberOfEdits());
+  EXPECT_EQ(1, mover2.getNumberOfEdits());
   
   QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover3(G, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 5, true, false);
   mover3.run();
-  EXPECT_EQ(0, mover3.getNumberOfEdits());
+  EXPECT_EQ(3, mover3.getNumberOfEdits());
   
   QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover4(G, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::RANDOM_INSERT, 5, true, false);
   mover4.run();
-  EXPECT_EQ(0, mover4.getNumberOfEdits());
+  EXPECT_EQ(3, mover4.getNumberOfEdits());
   
   QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover5(G, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 5, true, false);
   mover5.run();
-  EXPECT_EQ(0, mover5.getNumberOfEdits());
+  EXPECT_EQ(1, mover5.getNumberOfEdits());
 
 }
 
