@@ -230,6 +230,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     curEdits = numNeighbors;
 
     if (!insertRun) {
+        //check with theory. delete edges for ancestors or children
         // Calculate the old number of edits incident to c to be able to compute the improvement
         // later
         dynamicForest.dfsFrom(
@@ -238,14 +239,14 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
                 if (c != nodeToMove) {
                     //for all children in dfs insert one edge; no insertion necessary if child is neighbor of nodeToMove
                     curEdits += 1 - 2 * marker[c];
-                    curEditsWeight += 1 * removeEditCost - marker[c] * (removeEditCost + removeEditCost);//TODO weights
+                    curEditsWeight += 1 * insertEditCost - marker[c] * (insertEditCost + removeEditCost);//TODO weights
                 }
             },
             [](node) {});
         dynamicForest.forAncestors(nodeToMove, [&](node p) {
             //for all ancestors insert one edge; no insertion necessary if ancestor is neighbor of nodeToMove
             curEdits += 1 - 2 * marker[p];
-            curEditsWeight += 1  * removeEditCost - marker[p] * (removeEditCost + removeEditCost);//TODO weights
+            curEditsWeight += 1  * insertEditCost - marker[p] * (insertEditCost + removeEditCost);//TODO weights
          });
     }
     //first step of algorithm; isolate node
@@ -452,6 +453,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         //saved Edits too high
         if(weightEdits <= savedEditsWeight) {}
         else {weightEdits -= savedEditsWeight;}
+        TRACE("Saved Edits: ", savedEdits, ", SavedWeightedEdits: ", savedEditsWeight);
 #ifndef NDEBUG
         assert(numEdits == countNumberOfEdits());
         assert(weightEdits == countWeightOfEdits());
@@ -498,7 +500,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     traversalData[u].childClosenessWeight -=
         1 * removeEditCost - marker[u] * removeEditCost;
 
-    TRACE("Edit difference before descending: ", traversalData[u].childCloseness);
+    TRACE("Edit difference before descending: ", traversalData[u].childCloseness, ", ", traversalData[u].childClosenessWeight);
 
     assert(!marker[u] || traversalData[u].childClosenessWeight > 0);
 
@@ -516,14 +518,24 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
                     traversalData[u].childCloseness = -1;
                     //traversalData[u].childClosenessWeight = -1 * insertEditCost;
                     //traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
-                    traversalData[u].childClosenessWeight = -1 * removeEditCost;
+                    //traversalData[u].childClosenessWeight = -1 * removeEditCost;
+                    //if(marker[u]) traversalData[u].childClosenessWeight = -1 * removeEditCost;
+                    //else traversalData[u].childClosenessWeight = -1 * insertEditCost;
+                    //traversalData[u].childClosenessWeight = 1 * traversalData[c].childClosenessWeight;
                 } else {
                     //TODO: check for weighted case
                     --traversalData[u].childCloseness;
                     //traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
-                    traversalData[u].childClosenessWeight -= removeEditCost;
+                    //if(marker[u]) traversalData[u].childClosenessWeight -= removeEditCost;
+                    //else traversalData[u].childClosenessWeight -= insertEditCost;
                 }
-
+                if (traversalData[c].childClosenessWeight < 0){
+                    traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
+                }
+                else{
+                    if(marker[c]) traversalData[u].childClosenessWeight -= removeEditCost;
+                    else traversalData[u].childClosenessWeight -= insertEditCost;
+                }
                 // advance to the next starting point for the DFS search.
                 c = lastVisitedDFSNode[c];
 
@@ -545,7 +557,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
         }
     }
 
-    TRACE("Edit difference after descending: ", traversalData[u].childCloseness);
+    TRACE("Edit difference after descending: ", traversalData[u].childCloseness, ", ", traversalData[u].childClosenessWeight);
 
     if (!randomness) {
         if (sumPositiveEditsWeight > traversalData[u].scoreMaxWeight || traversalData[u].scoreMaxWeight == 0) {
@@ -583,13 +595,13 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     assert(traversalData[u].scoreMax >= 0);
 
     traversalData[u].scoreMax += marker[u];
-    traversalData[u].scoreMaxWeight += marker[u] * removeEditCost;
+    traversalData[u].scoreMaxWeight += marker[u] * insertEditCost;
 
     if (traversalData[u].scoreMaxWeight > 0) {
         traversalData[u].scoreMax -= 1 - marker[u];
-        traversalData[u].scoreMaxWeight -= 1 *removeEditCost - marker[u] * removeEditCost;
+        traversalData[u].scoreMaxWeight -= 1 *insertEditCost - marker[u] * removeEditCost;
     }
-    TRACE("Maximum gain at ", u, ": ", traversalData[u].scoreMax);
+    TRACE("Maximum gain at ", u, ": ", traversalData[u].scoreMax, ", ", traversalData[u].scoreMaxWeight);
     node p = dynamicForest.parent(u);
     TraversalData &parentData = (p == none) ? rootData : traversalData[p];
 
@@ -631,7 +643,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
         assert(traversalData[u].childCloseness <= traversalData[u].scoreMaxWeight);
         parentData.childCloseness += traversalData[u].childCloseness;
         parentData.childClosenessWeight += traversalData[u].childClosenessWeight;
-        if (traversalData[u].childCloseness == 0) {
+        if (traversalData[u].childClosenessWeight == 0) {
             ++parentData.numIndifferentChildren;
         } else {
             ++parentData.numCloseChildren;
