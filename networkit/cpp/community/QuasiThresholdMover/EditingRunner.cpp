@@ -498,7 +498,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
                        // --traversalData[u].childCloseness; }
     traversalData[u].childClosenessWeight += marker[u] * removeEditCost;
     traversalData[u].childClosenessWeight -=
-        1 * removeEditCost - marker[u] * removeEditCost;
+        1 * insertEditCost - marker[u] * insertEditCost;
 
     TRACE("Edit difference before descending: ", traversalData[u].childCloseness, ", ", traversalData[u].childClosenessWeight);
 
@@ -529,12 +529,14 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
                     //if(marker[u]) traversalData[u].childClosenessWeight -= removeEditCost;
                     //else traversalData[u].childClosenessWeight -= insertEditCost;
                 }
-                if (traversalData[c].childClosenessWeight < 0){
+                if (nodeTouched[c] && traversalData[c].childClosenessWeight < 0){
                     traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
                 }
                 else{
-                    if(marker[c]) traversalData[u].childClosenessWeight -= removeEditCost;
-                    else traversalData[u].childClosenessWeight -= insertEditCost;
+                    //if(marker[c]) 
+                    traversalData[u].childClosenessWeight -= insertEditCost;
+                    //else traversalData[u].childClosenessWeight -= removeEditCost;
+                    //traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight - traversalData[c].childClosenessWeight;
                 }
                 // advance to the next starting point for the DFS search.
                 c = lastVisitedDFSNode[c];
@@ -595,11 +597,11 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     assert(traversalData[u].scoreMax >= 0);
 
     traversalData[u].scoreMax += marker[u];
-    traversalData[u].scoreMaxWeight += marker[u] * insertEditCost;
+    traversalData[u].scoreMaxWeight += marker[u] * removeEditCost;
 
     if (traversalData[u].scoreMaxWeight > 0) {
         traversalData[u].scoreMax -= 1 - marker[u];
-        traversalData[u].scoreMaxWeight -= 1 *insertEditCost - marker[u] * removeEditCost;
+        traversalData[u].scoreMaxWeight -= 1 *insertEditCost - marker[u] * insertEditCost;
     }
     TRACE("Maximum gain at ", u, ": ", traversalData[u].scoreMax, ", ", traversalData[u].scoreMaxWeight);
     node p = dynamicForest.parent(u);
