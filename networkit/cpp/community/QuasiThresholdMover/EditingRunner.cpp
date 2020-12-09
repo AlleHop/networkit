@@ -202,7 +202,7 @@ Graph EditingRunner::getQuasiThresholdGraph() const {
 void EditingRunner::localMove(node nodeToMove, count generation) {
     assert(numEdits == countNumberOfEdits());
     assert(weightEdits == countWeightOfEdits());
-    TRACE("Move node ", nodeToMove);
+    INFO("Move node ", nodeToMove);
     handler.assureRunning();
     numNeighbors = 0;
     G.forEdgesOf(nodeToMove, [&](node v) {
@@ -420,9 +420,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     // calculate the number of saved edits as comparing the absolute number of edits doesn't make
     // sense
     count savedEdits = curEdits - bestEdits;
-    //bestEdits zero because of error
     count savedEditsWeight = curEditsWeight - bestEditsWeight;
-    //if(bestEditsWeight == 0) savedEditsWeight = savedEdits * removeEditCost;
 
     // cleanup for linear move
     for (node u : touchedNodes) {
@@ -448,12 +446,12 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         dynamicForest.moveToPosition(nodeToMove, rootData.bestParentBelow, bestChildren);
         hasMoved |= (savedEditsWeight > 0 || (randomness && rootEqualBestParentsCpy > 1));
         numNodesMoved += (savedEditsWeight > 0 || (randomness && rootEqualBestParentsCpy > 1));
-        if(numEdits <= savedEdits) {}
-        else { numEdits -= savedEdits;}
-        //saved Edits too high
-        if(weightEdits <= savedEditsWeight) {}
-        else {weightEdits -= savedEditsWeight;}
-        TRACE("Saved Edits: ", savedEdits, ", SavedWeightedEdits: ", savedEditsWeight);
+        //only consider savedEdits if edits also also save editCosts in weighted case
+        if(savedEditsWeight > 0 ){ 
+            numEdits -= savedEdits; 
+        }
+        weightEdits -= savedEditsWeight;
+        INFO("Saved Edits: ", savedEdits, ", SavedWeightedEdits: ", savedEditsWeight);
 #ifndef NDEBUG
         assert(numEdits == countNumberOfEdits());
         assert(weightEdits == countWeightOfEdits());
@@ -513,30 +511,16 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
             //resturcture if 
             if (!nodeTouched[c] || traversalData[c].childClosenessWeight < 0) {
 
-                if (traversalData[u].childClosenessWeight == 0 || dynamicForest.depth(c) > maxDepth) { //TODO depth check ausbauen wenn depth aufwendig
-                    //TODO minus close
+                if (traversalData[u].childCloseness == 0 || dynamicForest.depth(c) > maxDepth) { //TODO depth check ausbauen wenn depth aufwendig
                     traversalData[u].childCloseness = -1;
-                    //traversalData[u].childClosenessWeight = -1 * insertEditCost;
-                    //traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
-                    //traversalData[u].childClosenessWeight = -1 * removeEditCost;
-                    //if(marker[u]) traversalData[u].childClosenessWeight = -1 * removeEditCost;
-                    //else traversalData[u].childClosenessWeight = -1 * insertEditCost;
-                    //traversalData[u].childClosenessWeight = 1 * traversalData[c].childClosenessWeight;
                 } else {
-                    //TODO: check for weighted case
                     --traversalData[u].childCloseness;
-                    //traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
-                    //if(marker[u]) traversalData[u].childClosenessWeight -= removeEditCost;
-                    //else traversalData[u].childClosenessWeight -= insertEditCost;
                 }
                 if (nodeTouched[c] && traversalData[c].childClosenessWeight < 0){
                     traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
                 }
                 else{
-                    //if(marker[c]) 
                     traversalData[u].childClosenessWeight -= insertEditCost;
-                    //else traversalData[u].childClosenessWeight -= removeEditCost;
-                    //traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight - traversalData[c].childClosenessWeight;
                 }
                 // advance to the next starting point for the DFS search.
                 c = lastVisitedDFSNode[c];

@@ -44,6 +44,7 @@
 #include <networkit/community/QuasiThresholdEditingLocalMover.hpp>
 #include <networkit/community/QuasiThresholdMover/QuasiThresholdEditingLinear.hpp>
 #include <networkit/community/QuasiThresholdGreedyBound.hpp>
+#include <networkit/dynamics/GraphDifference.hpp>
 
 #include <tlx/unused.hpp>
 
@@ -937,9 +938,16 @@ TEST_F(CommunityGTest, testInclusionMinimalWeightedCost) {
   
   count pow_set_size = pow(2, used-minimum);
   INFO(used-minimum, " edits away from minimum");
-  INFO(used, " Number of Edits");
+  INFO(used, "," , edits.size()," Number of Edits");
   INFO(usedWeight, " Weight of Edits");
   INFO("Testing ", pow_set_size, " subsets");
+
+  GraphDifference difference(karate, Q);
+  difference.run();
+  count edgeRemovals = difference.getNumberOfEdgeRemovals();
+  count edgeInsertions = difference.getNumberOfEdgeAdditions();
+  INFO(edgeRemovals, " Remove Edits");
+  INFO(edgeInsertions, " Insert Edits");
   /*count counter, j;
   Graph G;
   for(counter = 1; counter < pow_set_size; counter++) {
