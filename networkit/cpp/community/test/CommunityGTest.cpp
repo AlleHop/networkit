@@ -911,10 +911,12 @@ TEST_F(CommunityGTest, testInclusionMinimal) {
 
 TEST_F(CommunityGTest, testInclusionMinimalWeightedCost) {
   Aux::Random::setSeed(37, false);
+  count removeEditCost = 2;
+  count insertEditCost = 5;
   count minimum = 21;
 	Graph karate = METISGraphReader().read("input/karate.graph");
   karate.indexEdges();
-  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(karate, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 20, true, false,4UL,false,5,2);
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(karate, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 20, true, false,4UL,false,insertEditCost,removeEditCost);
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
@@ -934,51 +936,64 @@ TEST_F(CommunityGTest, testInclusionMinimalWeightedCost) {
   }
   
   assert(edits.size() == used);
-  
-  
+   
   count pow_set_size = pow(2, used-minimum);
   INFO(used-minimum, " edits away from minimum");
   INFO(used, "," , edits.size()," Number of Edits");
   INFO(usedWeight, " Weight of Edits");
-  INFO("Testing ", pow_set_size, " subsets");
+
+  GraphDifference difference(karate, Q);
+  difference.run();
+  count edgeRemovals = difference.getNumberOfEdgeRemovals();
+  count edgeInsertions = difference.getNumberOfEdgeAdditions();
+  INFO(edgeRemovals," * ",removeEditCost, " Remove Edits");
+  INFO(edgeInsertions," * ",insertEditCost,  " Insert Edits");
+  assert((edgeRemovals * removeEditCost) + (edgeInsertions * insertEditCost) == usedWeight);
+}
+
+TEST_F(CommunityGTest, testWeightedCostMatrix) {
+  Aux::Random::setSeed(37, false);
+  std::vector<std::vector<count>>  editCostMatrix;
+  editCostMatrix.resize(34);
+  for(count i = 0; i< editCostMatrix.size(); i++){
+    editCostMatrix[i].resize(34, 1);
+  }
+
+  count minimum = 21;
+	Graph karate = METISGraphReader().read("input/karate.graph");
+  karate.indexEdges();
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(karate, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 20, true, false,4UL,false,1,1,editCostMatrix);
+  mover.run();
+  Graph Q = mover.getQuasiThresholdGraph();
+  count used = mover.getNumberOfEdits();
+  count usedWeight = mover.getWeightOfEdits();
+  assert(used >= minimum);
+  
+  std::vector<std::pair<std::pair<node, node>, bool>> edits;
+  for(node u = 0; u < karate.upperNodeIdBound(); u++){
+    for(node v = u+1; v < karate.upperNodeIdBound(); v++){
+      if(Q.hasEdge(u,v) && !karate.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 1));
+      }
+      if(!Q.hasEdge(u,v) && karate.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 0));
+      }
+    }
+  }
+  
+  assert(edits.size() == used);
+   
+  count pow_set_size = pow(2, used-minimum);
+  INFO(used-minimum, " edits away from minimum");
+  INFO(used, "," , edits.size()," Number of Edits");
+  INFO(usedWeight, " Weight of Edits");
 
   GraphDifference difference(karate, Q);
   difference.run();
   count edgeRemovals = difference.getNumberOfEdgeRemovals();
   count edgeInsertions = difference.getNumberOfEdgeAdditions();
   INFO(edgeRemovals, " Remove Edits");
-  INFO(edgeInsertions, " Insert Edits");
-  /*count counter, j;
-  Graph G;
-  for(counter = 1; counter < pow_set_size; counter++) {
-    G = Q;
-    for(j = 0; j < edits.size(); j++) {
-      if(counter & (1 << j)){
-        if(edits[j].second){
-          G.removeEdge(edits[j].first.first, edits[j].first.second);
-        } else {
-          G.addEdge(edits[j].first.first, edits[j].first.second);
-        }
-      }
-    }
-    G.indexEdges();
-
-    QuasiThresholdMoving::QuasiThresholdEditingLinear editing(G);
-    editing.run();
-    Graph G1 = editing.getQuasiThresholdGraph();
-    bool difference = false;
-    G.forNodes([&](node u){
-      G1.forNodes([&](node v){
-        if(G.hasEdge(u,v) != G1.hasEdge(u,v)){
-          difference = true;
-          return;
-        }
-      });
-    });
-    assert(difference);
-    INFO("OK ---- Removing edits broke QTG property");
-    
-  }*/
+  INFO(edgeInsertions,  " Insert Edits");
 }
 
 TEST_F(CommunityGTest, testRandomness) {

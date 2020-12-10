@@ -14,12 +14,12 @@ EditingRunner::EditingRunner(const Graph &G,
                              QuasiThresholdEditingLocalMover::Initialization initialization,
                              count maxIterations, bool sortPaths, bool randomness,
                              count maxPlateauSize, bool useBucketQueue, std::vector<node> order,
-                             count insertEditCost, count removeEditCost)
+                             count insertEditCost, count removeEditCost, std::vector<std::vector<count>> editCostMatrix)
     : G(G), maxIterations(maxIterations), usedIterations(0), sortPaths(sortPaths),
       randomness(randomness), maxPlateauSize(maxPlateauSize),
       insertRun(initialization != QuasiThresholdEditingLocalMover::TRIVIAL
                 && initialization != QuasiThresholdEditingLocalMover::EDITING),
-      useBucketQueue(useBucketQueue), insertEditCost(insertEditCost), removeEditCost(removeEditCost), handler(), hasMoved(true),
+      useBucketQueue(useBucketQueue), insertEditCost(insertEditCost), removeEditCost(removeEditCost), editCostMatrix(editCostMatrix), handler(), hasMoved(true),
       marker(G.upperNodeIdBound(), false), lastVisitedDFSNode(G.upperNodeIdBound(), none),
       traversalData(G.upperNodeIdBound()), nodeTouched(G.upperNodeIdBound(), false), rootData(),
       existing(G.upperNodeIdBound(), !insertRun), rootEqualBestParentsCpy(0), currentPlateau(0),
@@ -125,6 +125,9 @@ void EditingRunner::runLocalMover() {
     if (!insertRun) {
         runningInfo["edits"].push_back(numEdits);
         runningInfo["edits_weight"].push_back(weightEdits);
+    }
+    for(count i =0; i < editCostMatrix.size(); i++){
+        INFO(editCostMatrix[i]);
     }
     count generation = 0;
     //Main loop; check if iteration moved a node and if max iterations were used

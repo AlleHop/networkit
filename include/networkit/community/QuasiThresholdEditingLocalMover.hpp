@@ -17,7 +17,7 @@ public:
                                     count maxIterations = 5, bool sortPaths = true,
                                     bool randomness = false, count maxPlateauSize = 4,
                                     bool useBucketQueue = true,
-                                    count insertEditCost = 1, count removeEditCost = 1);
+                                    count insertEditCost = 1, count removeEditCost = 1, std::vector<std::vector<count>> editCostMatrix = {});
 
     void run() override;
 
@@ -42,6 +42,7 @@ private:
     bool useBucketQueue;
     count insertEditCost;
     count removeEditCost;
+    std::vector<std::vector<count>> editCostMatrix;
 
     std::vector<node> order;
 
