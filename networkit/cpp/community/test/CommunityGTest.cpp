@@ -956,7 +956,7 @@ TEST_F(CommunityGTest, testWeightedCostMatrix) {
   std::vector<std::vector<count>>  editCostMatrix;
   editCostMatrix.resize(34);
   for(count i = 0; i< editCostMatrix.size(); i++){
-    editCostMatrix[i].resize(34, 1);
+    editCostMatrix[i].resize(34, 2);
   }
 
   count minimum = 21;

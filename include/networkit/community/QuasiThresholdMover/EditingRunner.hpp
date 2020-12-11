@@ -141,6 +141,7 @@ private:
 
     bool insertRun;
     bool useBucketQueue;
+    bool editMatrixUsed;
     count insertEditCost;
     count removeEditCost;
     std::vector<std::vector<count>> editCostMatrix;
@@ -161,6 +162,8 @@ private:
     BucketQueue bucketQueue;
     std::vector<node> neighbors;
     count numNeighbors;
+    count editCostNeighbors;
+    std::vector<count> editCostNodeToMove;
     std::vector<node> touchedNodes;
     std::vector<node> lastVisitedDFSNode;
     std::vector<TraversalData> traversalData;
