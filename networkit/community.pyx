@@ -1118,6 +1118,7 @@ cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>":
 
 	cdef cppclass _QuasiThresholdEditingLocalMover "NetworKit::QuasiThresholdMoving::QuasiThresholdEditingLocalMover"(_Algorithm):
 		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost) except +
+		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost, vector[vector[count]] editCostMatrix) except +
 		count getNumberOfEdits() const
 		count getWeightOfEdits() const
 		count getUsedIterations() const
@@ -1125,7 +1126,6 @@ cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>":
 		_Graph getQuasiThresholdGraph() except +
 		void setInsertionOrder(vector[node] order) except +
 		map[string, vector[count]] getRunningInfo() except +
-		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost, vector[vector[count]] editCostMatrix) except +
 
 cdef class QuasiThresholdEditingLocalMover(Algorithm):
 	cdef Graph _G

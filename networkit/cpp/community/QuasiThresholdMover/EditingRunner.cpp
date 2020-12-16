@@ -133,7 +133,7 @@ void EditingRunner::runLocalMover() {
         //INFO(editCostMatrix[i]);
     }
     //check if edit Matrix has correct size
-    editMatrixUsed = (editCostMatrix.size() != 0 && editCostMatrix.size() == G.upperNodeIdBound() );
+    //editMatrixUsed = (editCostMatrix.size() != 0 && editCostMatrix.size() == G.upperNodeIdBound() );
     count generation = 0;
     //Main loop; check if iteration moved a node and if max iterations were used
     for (count i = insertRun ? 0 : 1; hasMoved && i <= maxIterations; ++i) {
@@ -238,7 +238,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     maxDepth = none;
     if(insertEditCost == 1 && removeEditCost == 1 && editMatrixUsed == false){
         maxDepth = 2 * numNeighbors;
-    }
+    }   
 
     //TODO: multiply with weights
     if(editMatrixUsed){
@@ -455,7 +455,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
 
     // calculate the number of saved edits as comparing the absolute number of edits doesn't make
     // sense
-    count savedEdits = curEdits - bestEdits;
+    int64_t savedEdits = curEdits - bestEdits;
     count savedEditsWeight = curEditsWeight - bestEditsWeight;
 
     // cleanup for linear move
@@ -555,13 +555,9 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
             //resturcture if 
             if (!nodeTouched[c] || traversalData[c].childClosenessWeight < 0) {
 
-                if (traversalData[u].childCloseness == 0 || dynamicForest.depth(c) > maxDepth) { //TODO depth check ausbauen wenn depth aufwendig
-                    traversalData[u].childCloseness = -1;
-                } else {
-                    --traversalData[u].childCloseness;
-                }
                 if (nodeTouched[c] && traversalData[c].childClosenessWeight < 0){
-                    traversalData[u].childClosenessWeight = traversalData[u].childClosenessWeight + traversalData[c].childClosenessWeight;
+                    traversalData[u].childClosenessWeight += traversalData[c].childClosenessWeight;
+                    traversalData[u].childCloseness+= traversalData[c].childCloseness;
                 }
                 else{
                     if(editMatrixUsed){
@@ -571,12 +567,12 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
                     else{
                         traversalData[u].childClosenessWeight -= insertEditCost;
                     }
-                    
+                    --traversalData[u].childCloseness;
                 }
                 // advance to the next starting point for the DFS search.
                 c = lastVisitedDFSNode[c];
 
-                if (traversalData[u].childClosenessWeight < 0) {
+                if (traversalData[u].childClosenessWeight < 0 || dynamicForest.depth(c) > maxDepth) {
                     lastVisitedDFSNode[u] = c;
                     break;
                 }
@@ -689,7 +685,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     }
 
     if (traversalData[u].childClosenessWeight >= 0) {
-        assert(traversalData[u].childCloseness <= traversalData[u].scoreMaxWeight);
+        assert(traversalData[u].childClosenessWeight <= traversalData[u].scoreMaxWeight);
         parentData.childCloseness += traversalData[u].childCloseness;
         parentData.childClosenessWeight += traversalData[u].childClosenessWeight;
         if (traversalData[u].childClosenessWeight == 0) {
@@ -893,16 +889,18 @@ count EditingRunner::countWeightOfEdits() const {
             r,
             [&](node u) { // on enter
                 count upperNeighbors = 0;
-                count editCostUpperNeighbors = 0;
 
                 G.forNeighborsOf(u, [&](node v) {
                     if (marker[v])
                         ++upperNeighbors;
+                        //-remove
+                    else {
+                        //+remove
+                    }
                 });
-
                 numExistingEdges += upperNeighbors;
                 numMissingEdges += depth - upperNeighbors;
-                marker[u] = true;
+                marker[u] = true;  
                 depth += 1;
             },
             [&](node u) { // on exit
@@ -913,7 +911,23 @@ count EditingRunner::countWeightOfEdits() const {
     TRACE("Missing Edges:  ", numMissingEdges,", NumEdges-ExistingEdges: " ,(G.numberOfEdges() - numExistingEdges));
     //TODO fix for editCostMatrix
     if(editMatrixUsed){
-        weightOfEdits = ((numMissingEdges * editCostMatrix[0][0]) + ((G.numberOfEdges() - numExistingEdges) * editCostMatrix[0][0]));
+        //weightOfEdits = ((numMissingEdges * editCostMatrix[8][1]) + ((G.numberOfEdges() - numExistingEdges) * editCostMatrix[8][1]));
+        Graph forest = dynamicForest.toGraph();
+        TreeReachabilityGraphGenerator gen(forest);
+        gen.run();
+        Graph Q = gen.getGraph();
+          std::vector<std::pair<std::pair<node, node>, bool>> edits;
+        for(node u = 0; u < G.upperNodeIdBound(); u++){
+            std::vector<count> editCostNodeU = editCostMatrix[u];
+            for(node v = u+1; v < G.upperNodeIdBound(); v++){
+                if(Q.hasEdge(u,v) && !G.hasEdge(u,v)){
+                    weightOfEdits += editCostNodeU[v];
+                }
+                if(!Q.hasEdge(u,v) && G.hasEdge(u,v)){
+                    weightOfEdits += editCostNodeU[v];
+                }
+            }
+        }
     }
     else{
         weightOfEdits = ((numMissingEdges * insertEditCost) + ((G.numberOfEdges() - numExistingEdges) * removeEditCost));
