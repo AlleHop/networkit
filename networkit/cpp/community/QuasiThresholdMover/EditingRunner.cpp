@@ -483,9 +483,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         hasMoved |= (savedEditsWeight > 0 || (randomness && rootEqualBestParentsCpy > 1));
         numNodesMoved += (savedEditsWeight > 0 || (randomness && rootEqualBestParentsCpy > 1));
         //only consider savedEdits if edits also also save editCosts in weighted case
-        if(savedEditsWeight > 0 ){ 
-            numEdits -= savedEdits; 
-        }
+        numEdits -= savedEdits; 
         weightEdits -= savedEditsWeight;
         INFO("Saved Edits: ", savedEdits, ", SavedWeightedEdits: ", savedEditsWeight);
 #ifndef NDEBUG
@@ -523,7 +521,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
     //TODO check if correct with weights
     int64_t sumPositiveEdits = traversalData[u].childCloseness;
     int64_t sumPositiveEditsWeight = traversalData[u].childClosenessWeight;
-    assert(traversalData[u].childCloseness >= 0);
+    assert(traversalData[u].childClosenessWeight >= 0);
 
     //TODO: multiply with weight
     traversalData[u].childCloseness += marker[u];
@@ -625,7 +623,7 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
         }
     }
 
-    assert(traversalData[u].scoreMax >= 0);
+    assert(traversalData[u].scoreMaxWeight >= 0);
 
     traversalData[u].scoreMax += marker[u];
     if(editMatrixUsed){
