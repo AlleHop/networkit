@@ -18,7 +18,7 @@ public:
     EditingRunner(const Graph &G, QuasiThresholdEditingLocalMover::Initialization initialization,
                   count maxIterations, bool sortPaths, bool randomness, count maxPlateauSize,
                   bool useBucketQueue, std::vector<node> order,
-                  count insertEditCost, count removeEditCost, std::vector<std::vector<count>> editCostMatrix);
+                  count insertEditCost, count removeEditCost, std::vector<std::vector<int64_t>> editCostMatrix);
 
     void runLocalMover();
 
@@ -144,7 +144,7 @@ private:
     bool editMatrixUsed;
     count insertEditCost;
     count removeEditCost;
-    std::vector<std::vector<count>> editCostMatrix;
+    std::vector<std::vector<int64_t>> editCostMatrix;
 
     count numEdits;
     count weightEdits;
@@ -163,7 +163,7 @@ private:
     std::vector<node> neighbors;
     count numNeighbors;
     count editCostNeighbors;
-    std::vector<count> editCostNodeToMove;
+    std::vector<int64_t> editCostNodeToMove;
     std::vector<node> touchedNodes;
     std::vector<node> lastVisitedDFSNode;
     std::vector<TraversalData> traversalData;

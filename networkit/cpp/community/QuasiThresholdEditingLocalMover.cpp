@@ -6,7 +6,7 @@ namespace NetworKit {
 namespace QuasiThresholdMoving {
 QuasiThresholdEditingLocalMover::QuasiThresholdEditingLocalMover(
     const Graph &G, Initialization initialization, count maxIterations, bool sortPaths,
-    bool randomness, count maxPlateauSize, bool useBucketQueue, count insertEditCost, count removeEditCost, std::vector<std::vector<count>> editCostMatrix)
+    bool randomness, count maxPlateauSize, bool useBucketQueue, count insertEditCost, count removeEditCost, std::vector<std::vector<int64_t>> editCostMatrix)
     : G(G), initialization(initialization), maxIterations(maxIterations), sortPaths(sortPaths),
       randomness(randomness), maxPlateauSize(maxPlateauSize), useBucketQueue(useBucketQueue), insertEditCost(insertEditCost), removeEditCost(removeEditCost), editCostMatrix(editCostMatrix),
       usedIterations(0), numEdits(0), weightEdits(0), rootEqualBestParents(0) {}

@@ -1,6 +1,7 @@
 # distutils: language=c++
 
 from libc.stdint cimport uint64_t
+from libc.stdint cimport int64_t
 
 from libcpp.string cimport string
 from libcpp cimport bool as bool_t
@@ -1118,7 +1119,7 @@ cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>":
 
 	cdef cppclass _QuasiThresholdEditingLocalMover "NetworKit::QuasiThresholdMoving::QuasiThresholdEditingLocalMover"(_Algorithm):
 		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost) except +
-		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost, vector[vector[count]] editCostMatrix) except +
+		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost, vector[vector[int64_t]] editCostMatrix) except +
 		count getNumberOfEdits() const
 		count getWeightOfEdits() const
 		count getUsedIterations() const
@@ -1129,7 +1130,7 @@ cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>":
 
 cdef class QuasiThresholdEditingLocalMover(Algorithm):
 	cdef Graph _G
-	cdef vector[vector[count]] _default
+	cdef vector[vector[int64_t]] _default
 
 
 	Trivial = _Initialization.TRIVIAL

@@ -953,7 +953,7 @@ TEST_F(CommunityGTest, testInclusionMinimalWeightedCost) {
 
 TEST_F(CommunityGTest, testWeightedCostMatrix) {
   Aux::Random::setSeed(37, false);
-  std::vector<std::vector<count>>  editCostMatrix;
+  std::vector<std::vector<int64_t>>  editCostMatrix;
   editCostMatrix.resize(34);
   for(count i = 0; i< editCostMatrix.size(); i++){
     editCostMatrix[i].resize(34, 2);
