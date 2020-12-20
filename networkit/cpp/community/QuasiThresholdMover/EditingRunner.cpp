@@ -709,6 +709,7 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
     existingBelowWeighted.resize(G.upperNodeIdBound(), 0);
     existingAboveWeighted.resize(G.upperNodeIdBound(), 0);
     std::vector<bool> usingDeepNeighbors(G.upperNodeIdBound(), false);
+    std::vector<int64_t> editCostNodeToMove = editCostMatrix[nodeToMove];
     dynamicForest.forChildrenOf(none, [&](node r) {
         if (existing[r]) {
             dynamicForest.dfsFrom(
@@ -717,10 +718,16 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
                     if (dynamicForest.depth(u) > maxDepth)
                         usingDeepNeighbors[u] = true;
                     if (u != nodeToMove) {
-                        missingBelow[u] = missingAbove[u] = 1 - marker[u];
-                        existingBelow[u] = existingAbove[u] = marker[u];
-                        missingBelowWeighted[u] = missingAboveWeighted[u] = 1 *insertEditCost - marker[u] * insertEditCost;
-                        existingBelowWeighted[u] = existingAboveWeighted[u] = marker[u] * removeEditCost;
+                            missingBelow[u] = missingAbove[u] = 1 - marker[u];
+                            existingBelow[u] = existingAbove[u] = marker[u];
+                        if(editMatrixUsed){
+                            missingBelowWeighted[u] = missingAboveWeighted[u] = 1 * editCostNodeToMove[u] - marker[u] * editCostNodeToMove[u];
+                            existingBelowWeighted[u] = existingAboveWeighted[u] = marker[u] * editCostNodeToMove[u];
+                        }
+                        else{
+                            missingBelowWeighted[u] = missingAboveWeighted[u] = 1 * insertEditCost - marker[u] * insertEditCost;
+                            existingBelowWeighted[u] = existingAboveWeighted[u] = marker[u] * removeEditCost;
+                        }
                     }
                     node p = dynamicForest.parent(u);
                     if (p != none) {
@@ -817,9 +824,15 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
             if (existingBelowWeighted[c] > missingBelowWeighted[c]) { // TODO try >= (more children...)
                 if (dynamicForest.children(c).empty() && marker[c]) {
                     assert(traversalData[c].childCloseness == 1);
-                    assert(traversalData[c].childClosenessWeight == 1 * removeEditCost);
+                    if(editMatrixUsed){
+                        assert(traversalData[c].childClosenessWeight == 1 * editCostNodeToMove[c]);
+                    }
+                    else{
+                        assert(traversalData[c].childClosenessWeight == 1 * removeEditCost);
+                    }
+
                 }
-                                assert(traversalData[c].childCloseness == existingBelow[c] - missingBelow[c]);//
+                assert(traversalData[c].childCloseness == existingBelow[c] - missingBelow[c]);//
                 assert(traversalData[c].childClosenessWeight == existingBelowWeighted[c] - missingBelowWeighted[c]);
 
                 children.emplace_back(c);
@@ -907,6 +920,7 @@ count EditingRunner::countWeightOfEdits() const {
     count numExistingEdges = 0;
     count numMissingEdges = 0;
     std::vector<int64_t> editCostNodeU = {};
+    std::vector<int64_t> editCostNodeP = {};
     std::vector<bool> marker(G.upperNodeIdBound());
 
     dynamicForest.forChildrenOf(none, [&](node r) {
@@ -940,11 +954,23 @@ count EditingRunner::countWeightOfEdits() const {
                 marker[u] = false;
                 depth -= 1;
             });
+        if(editMatrixUsed){
+            dynamicForest.forAncestors(r, [&] (node p){
+                G.forNeighborsOf(p, [&](node v) {
+                    if (marker[v]){
+                        weightOfInsertEdits -= editCostMatrix[p][v];
+                        weightOfRemoveEdits += editCostNodeU[v];
+                    }
+                });
+                weightOfInsertEdits += editCostMatrix[r][p];
+                marker[p] = true;
+            
+            });
+        }
     });
     TRACE("Missing Edges:  ", numMissingEdges,", NumEdges-ExistingEdges: " ,(G.numberOfEdges() - numExistingEdges));
     //TODO fix for editCostMatrix
     if(editMatrixUsed){
-        dynamicForest;
         weightOfEdits = (numMissingEdges * editCostMatrix[8][1]) + (weightOfRemoveEdits / 2);
     }
     else{
