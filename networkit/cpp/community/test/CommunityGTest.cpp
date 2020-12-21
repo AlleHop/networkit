@@ -956,12 +956,24 @@ TEST_F(CommunityGTest, testWeightedCostMatrix) {
   std::vector<std::vector<int64_t>>  editCostMatrix;
   editCostMatrix.resize(34);
   for(count i = 0; i< editCostMatrix.size(); i++){
-    editCostMatrix[i].resize(34, 2);
+    editCostMatrix[i].resize(34);
   }
 
   count minimum = 21;
 	Graph karate = METISGraphReader().read("input/karate.graph");
   karate.indexEdges();
+  for(node u = 0; u < karate.upperNodeIdBound(); u++){
+    for(node v = 0; v < karate.upperNodeIdBound(); v++){
+      if(karate.hasEdge(u,v)){
+        editCostMatrix[u][v] = 2;
+        editCostMatrix[v][u] = 2;
+      }
+      else{
+        editCostMatrix[u][v] = -2;
+        editCostMatrix[v][u] = -2;
+      }
+    }
+  }
   QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(karate, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 20, true, false,4UL,false,1,1,editCostMatrix);
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
