@@ -48,6 +48,9 @@ EditingRunner::EditingRunner(const Graph &G,
 
     //check if edit Matrix has correct size
     editMatrixUsed = (editCostMatrix.size() != 0 && editCostMatrix.size() == G.upperNodeIdBound() );
+    if(editMatrixUsed){
+        //G = getGraphFromEditMatrix();
+    }
 
     timer.start();
     switch (initialization) {
@@ -1007,6 +1010,20 @@ count EditingRunner::editsIncidentTo(node u) const {
     });
 
     return edits;
+}
+Graph EditingRunner::getGraphFromEditMatrix() {
+    Graph editGraph = Graph(editCostMatrix.size(),false,false);
+    std::vector<int64_t> editCostNodeU = {};
+    NetworKit::Unsafe unsafe;
+    for( count u; u < editCostMatrix.size(); u++){
+        editCostNodeU = editCostMatrix[u];
+        for( count v; v < editCostNodeU.size(); v++){
+            if(editCostNodeU[v] > 0){
+                editGraph.addPartialEdge(unsafe, u,v);
+            }
+        }
+    }
+    return editGraph;
 }
 } // namespace QuasiThresholdMoving
 

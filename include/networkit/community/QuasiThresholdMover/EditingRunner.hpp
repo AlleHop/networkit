@@ -200,6 +200,7 @@ private:
 
     void localMove(node nodeToMove, count generation);
     void processNode(node u, node nodeToMove, count generation);
+    Graph getGraphFromEditMatrix();
     void compareWithQuadratic(node nodeToMove, count generation) const;
     count countNumberOfEdits() const;
     count countWeightOfEdits() const;
