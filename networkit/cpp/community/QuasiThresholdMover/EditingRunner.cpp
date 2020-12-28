@@ -91,6 +91,19 @@ EditingRunner::EditingRunner(const Graph &G,
         }
         break;
     }
+    case QuasiThresholdEditingLocalMover::DESC_DEGREE_INSERT: {
+        dynamicForest = DynamicForest(std::vector<node>(G.upperNodeIdBound(), none));
+
+        std::vector<std::vector<node>> buckets(G.numberOfNodes());
+        G.forNodes([&](node u) { buckets[G.degree(u)].push_back(u); });
+        this->order.reserve(G.numberOfNodes());
+        for (auto it = buckets.rbegin(); it != buckets.rend(); ++it) {
+            for (node u : *it) {
+                this->order.push_back(u);
+            }
+        }
+        break;
+    }
     case QuasiThresholdEditingLocalMover::USER_DEFINED_INSERT: {
         dynamicForest = DynamicForest(std::vector<node>(G.upperNodeIdBound(), none));
         this->order = std::move(order);
@@ -426,8 +439,8 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
                     // sample either 0 or at least two nodes from indifferentChildren
                     std::vector<node> sample;
                     do {
+                        sample.clear();
                         for (node u : indifferentChildren) {
-                            sample.clear();
                             if (randomBool(2)) {
                                 sample.push_back(u);
                             }
@@ -438,11 +451,9 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
                         bestChildren.push_back(u);
                     }
                 }
-            }
-
-            // If there are already two children, just sample randomly from the remaining
-            // indifferent children
-            if (bestChildren.size() > 1) {
+            } else if (bestChildren.size() > 1) {
+                // If there are already two children, just sample randomly from the remaining
+                // indifferent children
                 for (node u : indifferentChildren) {
                     if (randomBool(2)) {
                         bestChildren.push_back(u);
