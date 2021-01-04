@@ -809,6 +809,12 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
     G.forNodes([&](node u) {
         if (u == nodeToMove || usingDeepNeighbors[u] || !existing[u])
             return;
+        if (existingBelow[u] >= missingBelow[u]
+            || (traversalData[u].generation == generation && traversalData[u].childCloseness > 0)) {
+            assert(traversalData[u].childCloseness == existingBelow[u] - missingBelow[u]);
+        } else if (nodeTouched[u]) {
+            assert(traversalData[u].childCloseness < 0);
+        }
         if (existingBelowWeighted[u] >= missingBelowWeighted[u]
             || (traversalData[u].generation == generation && traversalData[u].childClosenessWeight > 0)) {
             assert(traversalData[u].childClosenessWeight == existingBelowWeighted[u] - missingBelowWeighted[u]);
@@ -868,7 +874,7 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
         none, [](node) {}, tryEditBelow);
     tryEditBelow(none);
     //correct assertion? assert(minEdits >= bestEdits);
-    assert(minEdits <= bestEdits);
+    assert(minEdits >= bestEdits);
 
     count childClosenessControl = numNeighbors;
     if (rootData.bestParentBelow != none) {
@@ -888,8 +894,8 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
           minChildren);
     TRACE("Linear algorithm wants to have new parent ", rootData.bestParentBelow,
           " and new children ", bestChildren, " edits: ", childClosenessControl);
-    //correct assertion? assert(minEdits <= childClosenessControl);
-    assert(minEdits <= childClosenessControl);
+    //correct assertion? assert(minEdits >= childClosenessControl);
+    assert(minEdits >= childClosenessControl);
 
     G.forNodes([&](node u) {
         tlx::unused(u);
