@@ -497,8 +497,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         hasMoved |= (savedEditsWeight > 0 || (randomness && rootEqualBestParentsCpy > 1));
         numNodesMoved += (savedEditsWeight > 0 || (randomness && rootEqualBestParentsCpy > 1));
         //only consider savedEdits if edits also also save editCosts in weighted case
-        if(savedEdits>numEdits){}
-        else {numEdits -= savedEdits; }
+        numEdits -= savedEdits;
         weightEdits -= savedEditsWeight;
         INFO("Saved Edits: ", savedEdits, ", SavedWeightedEdits: ", savedEditsWeight);
 #ifndef NDEBUG
@@ -567,14 +566,15 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
         while (c != u) {
             //resturcture if 
             if (!nodeTouched[c] || traversalData[c].childClosenessWeight < 0) {
-
-                if (nodeTouched[c] && traversalData[c].childClosenessWeight < 0){
+                if (nodeTouched[c] ){
+                    assert(traversalData[c].childClosenessWeight < 0);
                     traversalData[u].childClosenessWeight += traversalData[c].childClosenessWeight;
                     traversalData[u].childCloseness+= traversalData[c].childCloseness;
+                    // advance to the next starting point for the DFS search.
+                    c = lastVisitedDFSNode[c];
                 }
                 else{
                     if(editMatrixUsed){
-                        //u or c?
                         traversalData[u].childClosenessWeight -= (-1) * editCostNodeToMove[c];
                     }
                     else{
@@ -582,8 +582,6 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
                     }
                     --traversalData[u].childCloseness;
                 }
-                // advance to the next starting point for the DFS search.
-                c = lastVisitedDFSNode[c];
 
                 if (traversalData[u].childClosenessWeight < 0 || dynamicForest.depth(c) > maxDepth) {
                     lastVisitedDFSNode[u] = c;
@@ -592,6 +590,9 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
 
                 c = dynamicForest.nextDFSNodeOnEnter(c, u);
             } else {
+                if(traversalData[c].childClosenessWeight == 0){
+                    traversalData[u].childCloseness += traversalData[c].childCloseness;
+                }
                 node p = dynamicForest.parent(c);
                 c = dynamicForest.nextChild(c, p);
 
@@ -699,12 +700,12 @@ void EditingRunner::processNode(node u, node nodeToMove, count generation) {
 
     if (traversalData[u].childClosenessWeight >= 0) {
         assert(traversalData[u].childClosenessWeight <= traversalData[u].scoreMaxWeight);
-        parentData.childCloseness += traversalData[u].childCloseness;
-        parentData.childClosenessWeight += traversalData[u].childClosenessWeight;
         if (traversalData[u].childClosenessWeight == 0) {
             ++parentData.numIndifferentChildren;
         } else {
             ++parentData.numCloseChildren;
+            parentData.childCloseness += traversalData[u].childCloseness;
+            parentData.childClosenessWeight += traversalData[u].childClosenessWeight;
         }
     }
 
@@ -803,21 +804,19 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
     }
 
     count minEdits = std::numeric_limits<count>::max();
+    count minEditsWeight = std::numeric_limits<count>::max();
+    count editsWeightOffset = 0;
     std::vector<node> minChildren;
     node minParent = curParent;
     //TODO fix assertions
     G.forNodes([&](node u) {
         if (u == nodeToMove || usingDeepNeighbors[u] || !existing[u])
             return;
-        if (existingBelow[u] >= missingBelow[u]
-            || (traversalData[u].generation == generation && traversalData[u].childCloseness > 0)) {
-            assert(traversalData[u].childCloseness == existingBelow[u] - missingBelow[u]);
-        } else if (nodeTouched[u]) {
-            assert(traversalData[u].childCloseness < 0);
-        }
         if (existingBelowWeighted[u] >= missingBelowWeighted[u]
             || (traversalData[u].generation == generation && traversalData[u].childClosenessWeight > 0)) {
             assert(traversalData[u].childClosenessWeight == existingBelowWeighted[u] - missingBelowWeighted[u]);
+            //
+            assert(traversalData[u].childCloseness == existingBelow[u] - missingBelow[u]);
         } else if (nodeTouched[u]) {
             assert(traversalData[u].childClosenessWeight < 0);
         }
@@ -828,16 +827,27 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
             && existing[u]) {
             assert(traversalData[u].childCloseness == 1);
         }
+        if(marker[u] && editMatrixUsed)
+        {       
+            assert(editCostNodeToMove[u]>=0);
+            editsWeightOffset += editCostNodeToMove[u];
+        }
     });
 
     auto tryEditBelow = [&](node p) {
         if (p == nodeToMove)
             return;
-
+        count editsWeight = editsWeightOffset;
         count edits = numNeighbors;
+        if(!editMatrixUsed)
+        {       
+            editsWeight = numNeighbors * removeEditCost;
+        }
         if (p != none) {
             edits += missingAbove[p];
             edits -= existingAbove[p];
+            editsWeight += missingAboveWeighted[p];
+            editsWeight -= existingAboveWeighted[p];
         }
 
         std::vector<node> children;
@@ -860,11 +870,13 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
 
                 children.emplace_back(c);
                 edits -= existingBelow[c] - missingBelow[c];
+                editsWeight -= existingBelowWeighted[c] - missingBelowWeighted[c];
             }
         });
 
-        if (edits < minEdits) {
+        if (editsWeight < minEditsWeight) {
             minEdits = edits;
+            minEditsWeight = editsWeight;
             minChildren = std::move(children);
             minParent = p;
         }
@@ -874,7 +886,8 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
         none, [](node) {}, tryEditBelow);
     tryEditBelow(none);
     //correct assertion? assert(minEdits >= bestEdits);
-    assert(minEdits >= bestEdits);
+    //assert(minEdits <= bestEdits);
+    assert(minEditsWeight == bestEditsWeight);
 
     count childClosenessControl = numNeighbors;
     if (rootData.bestParentBelow != none) {
@@ -895,7 +908,7 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
     TRACE("Linear algorithm wants to have new parent ", rootData.bestParentBelow,
           " and new children ", bestChildren, " edits: ", childClosenessControl);
     //correct assertion? assert(minEdits >= childClosenessControl);
-    assert(minEdits >= childClosenessControl);
+    assert(minEdits <= childClosenessControl);
 
     G.forNodes([&](node u) {
         tlx::unused(u);
