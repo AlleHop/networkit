@@ -19,7 +19,10 @@ EditingRunner::EditingRunner(const Graph &G,
       randomness(randomness), maxPlateauSize(maxPlateauSize),
       insertRun(initialization != QuasiThresholdEditingLocalMover::TRIVIAL
                 && initialization != QuasiThresholdEditingLocalMover::EDITING),
-      useBucketQueue(useBucketQueue), insertEditCost(insertEditCost), removeEditCost(removeEditCost), editCostMatrix(editCostMatrix), handler(), hasMoved(true),
+      useBucketQueue(useBucketQueue
+      && !(editCostMatrix.size() != 0 && editCostMatrix.size() == G.upperNodeIdBound()) 
+      && (insertEditCost == 1 && removeEditCost ==1)), 
+      insertEditCost(insertEditCost), removeEditCost(removeEditCost), editCostMatrix(editCostMatrix), handler(), hasMoved(true),
       marker(G.upperNodeIdBound(), false), lastVisitedDFSNode(G.upperNodeIdBound(), none),
       traversalData(G.upperNodeIdBound()), nodeTouched(G.upperNodeIdBound(), false), rootData(),
       existing(G.upperNodeIdBound(), !insertRun), rootEqualBestParentsCpy(0), currentPlateau(0),
