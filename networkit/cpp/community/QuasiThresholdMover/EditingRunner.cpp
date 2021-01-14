@@ -125,6 +125,7 @@ EditingRunner::EditingRunner(const Graph &G,
     numEdits = countNumberOfEdits();
     weightEdits = countWeightOfEdits();
     editsBefore = numEdits;
+    editsWeightBefore = weightEdits;
 
     G.forNodes([&](node u) { lastVisitedDFSNode[u] = u; });
 
@@ -207,7 +208,7 @@ void EditingRunner::runLocalMover() {
         assert(numEdits == countNumberOfEdits());
         assert(weightEdits == countWeightOfEdits());
         //update plateau
-        if (numEdits == editsBefore) {
+        if (weightEdits == editsWeightBefore) {
             currentPlateau++;
         } else {
             if (currentPlateau > actualMaximumPlateau) {
@@ -215,7 +216,7 @@ void EditingRunner::runLocalMover() {
             }
             currentPlateau = 0;
         }
-        editsBefore = numEdits;
+        editsWeightBefore = weightEdits;
     }
 }
 

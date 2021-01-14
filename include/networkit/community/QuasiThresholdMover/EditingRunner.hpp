@@ -183,8 +183,9 @@ private:
 
     count rootEqualBestParentsCpy;
     count numNodesMoved;
-
+    
     count editsBefore;
+    count editsWeightBefore;
     count currentPlateau;
     count actualMaximumPlateau;
 
