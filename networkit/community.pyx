@@ -1126,6 +1126,7 @@ cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>":
 		count getUsedIterations() const
 		count getPlateauSize() const
 		_Graph getQuasiThresholdGraph() except +
+		_Graph getDynamicForestGraph() except +
 		void setInsertionOrder(vector[node] order) except +
 		map[string, vector[count]] getRunningInfo() except +
 
@@ -1162,6 +1163,9 @@ cdef class QuasiThresholdEditingLocalMover(Algorithm):
 
 	def getQuasiThresholdGraph(self):
 		return Graph().setThis((<_QuasiThresholdEditingLocalMover *>(self._this)).getQuasiThresholdGraph())
+
+	def getDynamicForestGraph(self):
+		return Graph().setThis((<_QuasiThresholdEditingLocalMover *>(self._this)).getDynamicForestGraph())
 
 
 	def setInsertionOrder(self, vector[node] order):

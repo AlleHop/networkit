@@ -21,6 +21,7 @@ void QuasiThresholdEditingLocalMover::run() {
     plateauSize = runner.getPlateauSize();
     rootEqualBestParents = runner.getRootEqualBestParents();
     quasiThresholdGraph = runner.getQuasiThresholdGraph();
+    dynamicForestGraph = runner.getDynamicForestGraph();
     runningInfo = runner.getRunningInfo();
     hasRun = true;
 }
@@ -28,6 +29,11 @@ void QuasiThresholdEditingLocalMover::run() {
 Graph QuasiThresholdEditingLocalMover::getQuasiThresholdGraph() const {
     assureFinished();
     return quasiThresholdGraph;
+}
+
+Graph QuasiThresholdEditingLocalMover::getDynamicForestGraph() const {
+    assureFinished();
+    return dynamicForestGraph;
 }
 
 count QuasiThresholdEditingLocalMover::getNumberOfEdits() const {

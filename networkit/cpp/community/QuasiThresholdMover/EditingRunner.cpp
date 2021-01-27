@@ -227,6 +227,11 @@ Graph EditingRunner::getQuasiThresholdGraph() const {
     return gen.getGraph();
 }
 
+Graph EditingRunner::getDynamicForestGraph() const {
+    Graph forest = dynamicForest.toGraph();
+    return forest;
+}
+
 void EditingRunner::localMove(node nodeToMove, count generation) {
     assert(numEdits == countNumberOfEdits());
     assert(weightEdits == countWeightOfEdits());

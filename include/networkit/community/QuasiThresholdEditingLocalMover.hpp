@@ -22,6 +22,7 @@ public:
     void run() override;
 
     Graph getQuasiThresholdGraph() const;
+    Graph getDynamicForestGraph() const;
     count getNumberOfEdits() const;
     count getWeightOfEdits() const;
     count getUsedIterations() const;
@@ -53,6 +54,7 @@ private:
     count rootEqualBestParents;
 
     Graph quasiThresholdGraph;
+    Graph dynamicForestGraph;
 
     std::map<std::string, std::vector<count>> runningInfo;
 };

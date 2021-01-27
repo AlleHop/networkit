@@ -36,6 +36,8 @@ public:
 
     Graph getQuasiThresholdGraph() const;
 
+    Graph getDynamicForestGraph() const;
+
 private:
     struct TraversalData {
         count generation;
