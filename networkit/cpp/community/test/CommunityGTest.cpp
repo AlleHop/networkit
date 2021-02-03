@@ -917,7 +917,7 @@ TEST_F(CommunityGTest, testInclusionMinimalWeightedCost) {
   count minimum = 21;
 	Graph karate = METISGraphReader().read("input/karate.graph");
   karate.indexEdges();
-  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(karate, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 20, true, false,4UL, true,insertEditCost,removeEditCost);
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(karate, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 20, true, false, false, 4UL, true, insertEditCost, removeEditCost);
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
@@ -975,7 +975,7 @@ TEST_F(CommunityGTest, testWeightedCostMatrix) {
       }
     }
   }
-  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(karate, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 20, true, false,4UL,true,1,1,editCostMatrix);
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(karate, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 20, true, false, false, 4UL, true, 1, 1, editCostMatrix);
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
@@ -1044,7 +1044,7 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrix) {
   count minimum = 5122;
 	Graph graph = METISGraphReader().read("../input/biological/graphs/bio-nr-3261-size-13.graph");
   graph.indexEdges();
-  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(graph, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 5, true, true, 5UL, true,1,1,editCostMatrix);
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(graph, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 5, true, true, false, 5UL, true,1,1,editCostMatrix);
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();

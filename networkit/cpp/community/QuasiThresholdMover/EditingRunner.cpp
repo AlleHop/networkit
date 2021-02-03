@@ -12,11 +12,11 @@ namespace NetworKit {
 namespace QuasiThresholdMoving {
 EditingRunner::EditingRunner(const Graph &G,
                              QuasiThresholdEditingLocalMover::Initialization initialization,
-                             count maxIterations, bool sortPaths, bool randomness,
+                             count maxIterations, bool sortPaths, bool randomness, bool moveSubtrees,
                              count maxPlateauSize, bool useBucketQueue, std::vector<node> order,
                              count insertEditCost, count removeEditCost, std::vector<std::vector<int64_t>> editCostMatrix)
     : G(G), maxIterations(maxIterations), usedIterations(0), sortPaths(sortPaths),
-      randomness(randomness), maxPlateauSize(maxPlateauSize),
+      randomness(randomness), moveSubtrees(moveSubtrees), maxPlateauSize(maxPlateauSize),
       insertRun(initialization != QuasiThresholdEditingLocalMover::TRIVIAL
                 && initialization != QuasiThresholdEditingLocalMover::EDITING),
       useBucketQueue(useBucketQueue
