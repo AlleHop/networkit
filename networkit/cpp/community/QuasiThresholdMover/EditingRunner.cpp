@@ -501,6 +501,192 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     neighbors.clear();
     touchedNodes.clear();
 
+    bool moveWithSubtree = false;
+
+    if (moveSubtrees) {
+        std::vector<int64_t> missingBelow, missingAbove, existingBelow, existingAbove;
+        std::vector<int64_t> missingBelowWeighted, missingAboveWeighted, existingBelowWeighted, existingAboveWeighted;
+        missingBelow.resize(G.upperNodeIdBound(), 0);
+        missingAbove.resize(G.upperNodeIdBound(), 0);
+        existingBelow.resize(G.upperNodeIdBound(), 0);
+        existingAbove.resize(G.upperNodeIdBound(), 0);
+        missingBelowWeighted.resize(G.upperNodeIdBound(), 0);
+        missingAboveWeighted.resize(G.upperNodeIdBound(), 0);
+        existingBelowWeighted.resize(G.upperNodeIdBound(), 0);
+        existingAboveWeighted.resize(G.upperNodeIdBound(), 0);
+        std::vector<bool> usingDeepNeighbors(G.upperNodeIdBound(), false);
+        if (editMatrixUsed)
+        {
+            std::vector<int64_t> editCostNodeToMove = editCostMatrix[nodeToMove];
+        }
+        dynamicForest.forChildrenOf(none, [&](node r) {
+            if (existing[r]) {
+                dynamicForest.dfsFrom(
+                    r,
+                        [&](node u) {
+                        if (dynamicForest.depth(u) > maxDepth)
+                            usingDeepNeighbors[u] = true;
+                        if (u != nodeToMove) {
+                                missingBelow[u] = missingAbove[u] = 1 - marker[u];
+                                existingBelow[u] = existingAbove[u] = marker[u];
+                            if(editMatrixUsed){
+                                missingBelowWeighted[u] = missingAboveWeighted[u] = 1 * (-1) * editCostNodeToMove[u] - marker[u] * (-1) * editCostNodeToMove[u];
+                                existingBelowWeighted[u] = existingAboveWeighted[u] = marker[u] * editCostNodeToMove[u];
+                            }
+                            else{
+                                missingBelowWeighted[u] = missingAboveWeighted[u] = 1 * insertEditCost - marker[u] * insertEditCost;
+                                existingBelowWeighted[u] = existingAboveWeighted[u] = marker[u] * removeEditCost;
+                            }
+                       }
+                        node p = dynamicForest.parent(u);
+                        if (p != none) {
+                            missingAbove[u] += missingAbove[p];
+                            existingAbove[u] += existingAbove[p];
+                            missingAboveWeighted[u] += missingAboveWeighted[p];
+                            existingAboveWeighted[u] += existingAboveWeighted[p];
+                        }
+                   },
+                    [&](node u) {
+                        node p = dynamicForest.parent(u);
+                        if (p != none) {
+                            missingBelow[p] += missingBelow[u];
+                            existingBelow[p] += existingBelow[u];
+                            missingBelowWeighted[p] += missingBelowWeighted[u];
+                            existingBelowWeighted[p] += existingBelowWeighted[u];
+                        if (usingDeepNeighbors[u])
+                               usingDeepNeighbors[p] = true;
+                    }
+                });
+            }
+        });
+
+        assert(missingBelow[nodeToMove] == 0);
+        assert(existingBelow[nodeToMove] == 0);
+        assert(missingBelowWeighted[nodeToMove] == 0);
+        assert(existingBelowWeighted[nodeToMove] == 0);
+
+        if (!sortPaths) {
+           bool exactValue = true;
+            for (node c : curChildren) {
+                missingBelow[nodeToMove] += missingBelow[c];
+                existingBelow[nodeToMove] += existingBelow[c];
+                missingBelowWeighted[nodeToMove] += missingBelowWeighted[c];
+                existingBelowWeighted[nodeToMove] += existingBelowWeighted[c];
+                if (usingDeepNeighbors[c])
+                    exactValue = false;
+            }
+
+            if (curParent != none) {
+                missingAbove[nodeToMove] = missingAbove[curParent];
+                existingAbove[nodeToMove] = existingAbove[curParent];
+                missingAboveWeighted[nodeToMove] = missingAboveWeighted[curParent];
+                existingAboveWeighted[nodeToMove] = existingAboveWeighted[curParent];
+                if (usingDeepNeighbors[curParent])
+                    exactValue = false;
+            }
+        /*if (exactValue) {
+            assert(curEdits
+                   == numNeighbors - existingAbove[nodeToMove] - existingBelow[nodeToMove]
+                          + missingAbove[nodeToMove] + missingBelow[nodeToMove]);
+            assert(curEditsWeight
+                   == numNeighbors * removeEditCost - existingAboveWeighted[nodeToMove] - existingBelowWeighted[nodeToMove]
+                          + missingAboveWeighted[nodeToMove] + missingBelowWeighted[nodeToMove]);
+        }*/
+        }
+        std::vector<count> numNeighborsAll;
+		numNeighborsAll.resize(G.upperNodeIdBound(), 0);
+
+		/*dynamicForest.setParent(nodeToMove, curParent);
+		for (node c : curChildren) {
+			dynamicForest.setParent(c, nodeToMove);
+		}*/
+        dynamicForest.moveToPosition(nodeToMove, curParent, curChildren);
+
+		count subtreeSize = 0;
+		dynamicForest.dfsFrom(nodeToMove, [&](node d) {
+			marker[d] = true;
+			++subtreeSize;
+		}, [](node) {});
+		count subtreeExtDegree = 0;
+		dynamicForest.dfsFrom(nodeToMove, [&](node d) {
+			G.forNeighborsOf(d, [&](node v) {
+				if (!marker[v]) {
+					++numNeighborsAll[v];
+					++subtreeExtDegree;
+				}
+			});
+		}, [](node) {});
+		dynamicForest.forChildrenOf(none, [&](node r) {
+			dynamicForest.dfsFrom(r,
+			[&](node u) {
+				if (!marker[u]) {
+					missingAbove[u] = subtreeSize - numNeighborsAll[u];
+					existingAbove[u] = numNeighborsAll[u];
+					node p = dynamicForest.parent(u);
+					if (p != none) {
+						missingAbove[u] += missingAbove[p];
+						existingAbove[u] += existingAbove[p];
+					}
+				}
+			},
+			[](node) {});
+		});
+		// virtually remove the subtree of u from the forest concerning the missing/existingBelow-counters
+		for (node u = curParent; u != none; u = dynamicForest.parent(u)) {
+			existingBelow[u] -= existingBelow[nodeToMove];
+			missingBelow[u] -= missingBelow[nodeToMove];
+		}
+
+		// calculate how many edits the whole subtree currently needs
+		count curSubtreeEdits = subtreeExtDegree;
+		if (curParent != none) { // FIXME here we ignore edits inside the tree as they do not change. Is this okay?
+			curSubtreeEdits += missingAbove[curParent];
+			curSubtreeEdits -= existingAbove[curParent];
+		}
+
+		auto trySubtreeEditBelow = [&](node p) {
+			if (p != none && marker[p]) return;
+
+			count edits = subtreeExtDegree;
+			if (p != none) {
+				edits += missingAbove[p];
+				edits -= existingAbove[p];
+			}
+
+			std::vector<node> children;
+			dynamicForest.forChildrenOf(p, [&](node c) {
+				if (marker[c]) return;
+				if (existingBelow[c] >= missingBelow[c]) { // TODO try >= (more children...)
+					children.emplace_back(c);
+					edits -= existingBelow[c] - missingBelow[c];
+				}
+			});
+
+			if (edits < curSubtreeEdits && savedEdits < curSubtreeEdits - edits) {
+				bestEdits = edits;
+				bestChildren = std::move(children);
+				rootData.bestParentBelow = p;
+				moveWithSubtree = true;
+				savedEdits = curSubtreeEdits - edits;
+			}
+		};
+
+		G.forNodes(trySubtreeEditBelow);
+		trySubtreeEditBelow(none);
+
+		dynamicForest.dfsFrom(nodeToMove, [&](node d) {
+			marker[d] = false;
+			G.forNeighborsOf(d, [&](node v) {
+				numNeighborsAll[v] = 0;
+			});
+		}, [](node) {});
+
+        savedEditsWeight = savedEdits;
+		TRACE("After subtree moving, ", savedEdits, " edits will be saved");
+		TRACE("After subtree moving (quadratic) algorithm wants to have new parent ", rootData.bestParentBelow, " and new children ", bestChildren);
+        dynamicForest.isolate(nodeToMove);
+	}
+
     if (sortPaths || savedEditsWeight > 0 || randomness) {
         dynamicForest.moveToPosition(nodeToMove, rootData.bestParentBelow, bestChildren);
         hasMoved |= (savedEditsWeight > 0 || (randomness && rootEqualBestParentsCpy > 1));
