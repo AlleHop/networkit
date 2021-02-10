@@ -495,17 +495,12 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         rootEqualBestParentsCpy = std::numeric_limits<count>::max();
     }
 
-    for (node v : neighbors) {
-        marker[v] = false;
-    }
-    neighbors.clear();
-    touchedNodes.clear();
 
     bool moveWithSubtree = false;
+    std::vector<int64_t> missingBelow, missingAbove, existingBelow, existingAbove;
+    std::vector<int64_t> missingBelowWeighted, missingAboveWeighted, existingBelowWeighted, existingAboveWeighted;
 
     if (moveSubtrees) {
-        std::vector<int64_t> missingBelow, missingAbove, existingBelow, existingAbove;
-        std::vector<int64_t> missingBelowWeighted, missingAboveWeighted, existingBelowWeighted, existingAboveWeighted;
         missingBelow.resize(G.upperNodeIdBound(), 0);
         missingAbove.resize(G.upperNodeIdBound(), 0);
         existingBelow.resize(G.upperNodeIdBound(), 0);
@@ -593,13 +588,18 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
                           + missingAboveWeighted[nodeToMove] + missingBelowWeighted[nodeToMove]);
         }*/
         }
+    }
+
+    for (node v : neighbors) {
+        marker[v] = false;
+    }
+    neighbors.clear();
+    touchedNodes.clear();
+
+    if (moveSubtrees) {
         std::vector<count> numNeighborsAll;
 		numNeighborsAll.resize(G.upperNodeIdBound(), 0);
 
-		/*dynamicForest.setParent(nodeToMove, curParent);
-		for (node c : curChildren) {
-			dynamicForest.setParent(c, nodeToMove);
-		}*/
         dynamicForest.moveToPosition(nodeToMove, curParent, curChildren);
 
 		count subtreeSize = 0;
@@ -662,7 +662,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
 				}
 			});
 
-			if (edits < curSubtreeEdits && savedEdits < curSubtreeEdits - edits) {
+			if (edits < curSubtreeEdits && savedEdits < curSubtreeEdits - edits && subtreeSize > 1) {
 				bestEdits = edits;
 				bestChildren = std::move(children);
 				rootData.bestParentBelow = p;
