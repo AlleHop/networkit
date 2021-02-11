@@ -597,6 +597,8 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     touchedNodes.clear();
 
     if (moveSubtrees) {
+        TRACE("Before subtree moving, ", savedEdits, " edits will be saved, current Children ", curChildren);
+		TRACE("Before subtree moving linear algorithm wants to have new parent ", rootData.bestParentBelow, " and new children ", bestChildren);
         std::vector<count> numNeighborsAll;
 		numNeighborsAll.resize(G.upperNodeIdBound(), 0);
 
@@ -665,6 +667,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
 			if (edits < curSubtreeEdits && savedEdits < curSubtreeEdits - edits && subtreeSize > 1) {
 				bestEdits = edits;
 				bestChildren = std::move(children);
+                bestChildren.insert( bestChildren.end(), curChildren.begin(), curChildren.end() );
 				rootData.bestParentBelow = p;
 				moveWithSubtree = true;
 				savedEdits = curSubtreeEdits - edits;
