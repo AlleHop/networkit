@@ -305,7 +305,13 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
             }
         });
     }
+    node p = dynamicForest.parent(nodeToMove);
+    TRACE("IsLowerEnd: ", dynamicForest.isLowerEnd(p));
     //first step of algorithm; isolate node
+    TRACE("Subtreesize:", subtreeSize);
+    TRACE("Children: ", dynamicForest.children(nodeToMove));
+    TRACE("Parent: ", dynamicForest.parent(nodeToMove));
+    TRACE(dynamicForest.printPaths());
     dynamicForest.isolate(nodeToMove);
     //sort path optimization
     if (sortPaths) {
@@ -313,6 +319,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
             dynamicForest.moveUpNeighbor(v, nodeToMove);
         }
     }
+    TRACE(dynamicForest.printPaths());
     //TODO ignore bucket queue for weighted because maxDepth is not limited
     if (useBucketQueue) {
         bucketQueue.fill(neighbors, dynamicForest);
@@ -803,7 +810,7 @@ void EditingRunner::compareWithQuadratic(node nodeToMove, count generation) cons
             if (usingDeepNeighbors[curParent])
                 exactValue = false;
         }
-        if (exactValue) {
+        if (exactValue && !editMatrixUsed) {
             assert(curEdits
                    == numNeighbors - existingAbove[nodeToMove] - existingBelow[nodeToMove]
                           + missingAbove[nodeToMove] + missingBelow[nodeToMove]);
