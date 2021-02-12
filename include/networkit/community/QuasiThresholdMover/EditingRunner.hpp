@@ -182,6 +182,8 @@ private:
     std::vector<node> curChildren;
     std::vector<node> bestChildren;
 
+    count subtreeSize;
+
     std::vector<bool> existing;
 
     count rootEqualBestParentsCpy;

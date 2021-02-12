@@ -273,7 +273,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         curEditsWeight = removeEditCost * numNeighbors;
     }
     curEdits = numNeighbors;
-
+    subtreeSize = 0;
     if (!insertRun) {
         //check with theory. delete edges for ancestors or children
         // Calculate the old number of edits incident to c to be able to compute the improvement
@@ -284,6 +284,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
                 if (c != nodeToMove) {
                     //for all children in dfs insert one edge; no insertion necessary if child is neighbor of nodeToMove
                     curEdits += 1 - 2 * marker[c];
+                    subtreeSize++;
                     if(editMatrixUsed){
                         curEditsWeight += 1 * (-1) * editCostNodeToMove[c] - marker[c] * ((-1) * editCostNodeToMove[c] + editCostNodeToMove[c]);
                     }
