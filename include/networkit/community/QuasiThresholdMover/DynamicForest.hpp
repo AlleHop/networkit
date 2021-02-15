@@ -17,6 +17,7 @@ public:
     void isolate(node u);
     void moveUpNeighbor(node referenceNode, node Neighbor);
     void moveToPosition(node u, node p, const std::vector<node> &adoptedChildren);
+    void moveToAnyPosition(node u, node p, const std::vector<node> &adoptedChildren);
     Graph toGraph() const;
     std::string printPaths() const;
 
@@ -214,8 +215,9 @@ private:
         }
     };
 
-    bool isUpperEnd(node u) const { return (path_pos[u] == paths[path(u)].length() - 1); };
+
 public:
+    bool isUpperEnd(node u) const { return (path_pos[u] == paths[path(u)].length() - 1); };
     bool isLowerEnd(node u) const { return (path_pos[u] == 0); };
 private:
     node nextNodeInPath(node u) const {

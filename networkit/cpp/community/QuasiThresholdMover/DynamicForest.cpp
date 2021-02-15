@@ -325,6 +325,35 @@ void DynamicForest::moveToPosition(node u, node p, const std::vector<node> &adop
     assert(pathsValid());
 }
 
+void DynamicForest::moveToAnyPosition(node u, node p, const std::vector<node> &adoptedChildren) {
+    // check that the node is isolated
+    pid parentPath = path(p);
+    pid oldPath = path(u);
+#ifndef NDEBUG
+    TRACE(printPaths());
+    //assert(paths[oldPath].parent == none);
+    //assert(parent(u) == p);
+    //assert(childCount(u) == 0);
+    //assert(paths[path(u)].length() == 1);
+#endif
+    // place all children below node
+    if (u != none && !isLowerEnd(u) && adoptedChildren.size() > 0) {
+        splitPath(oldPath, path_pos[u]);
+        oldPath = path(u);
+    }
+    if(isLowerEnd(u)){
+        for (node child : adoptedChildren) {
+                setParentPath(path(child), path(u));
+        }
+        if(paths[path(u)].childPaths.size() == 1 && adoptedChildren.size() == 1){
+            unionPaths(path(u), path(adoptedChildren[0]));
+        } 
+    }
+    TRACE(printPaths());
+    updateDepthInSubtree(path(u));
+    assert(pathsValid());
+}
+
 bool DynamicForest::pathsValid() {
   #ifndef NDEBUG
     // check that parent/child relations for paths are valid
@@ -438,6 +467,12 @@ std::string DynamicForest::printPaths() const {
         ss << "]";
         if (path_pos[u] != none) {
             ss << " pos " << path_pos[u];
+        }
+        ss << " parent ";
+        if( parent(u) == none) {
+            ss << "none";
+        } else {
+            ss << parent(u);
         }
         ss << "} ";
     }
