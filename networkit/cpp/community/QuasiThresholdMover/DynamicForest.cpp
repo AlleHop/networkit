@@ -329,6 +329,8 @@ void DynamicForest::moveToAnyPosition(node u, node p, const std::vector<node> &a
     // check that the node is isolated
     pid parentPath = path(p);
     pid oldPath = path(u);
+    std::vector<node> oldChildren;
+    node oldParent;
 #ifndef NDEBUG
     TRACE(printPaths());
     //assert(paths[oldPath].parent == none);
@@ -343,13 +345,19 @@ void DynamicForest::moveToAnyPosition(node u, node p, const std::vector<node> &a
     }
     if(isLowerEnd(u)){
         for (node child : adoptedChildren) {
-                setParentPath(path(child), path(u));
+            oldParent = parent(child);
+            setParentPath(path(child), path(u));
+            oldChildren = children(oldParent);
         }
         if(paths[path(u)].childPaths.size() == 1 && adoptedChildren.size() == 1){
             unionPaths(path(u), path(adoptedChildren[0]));
-        } 
+        }
+        if(paths[path(oldParent)].childPaths.size() == 1){
+            unionPaths(path(oldParent), path(oldChildren[0]));
+        }
     }
     TRACE(printPaths());
+    updateDepthInSubtree(path(oldParent));
     updateDepthInSubtree(path(u));
     assert(pathsValid());
 }
