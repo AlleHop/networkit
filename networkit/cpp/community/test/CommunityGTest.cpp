@@ -1078,6 +1078,63 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrix) {
   INFO(edgeInsertions,  " Insert Edits");
 }
 
+TEST_F(CommunityGTest, testWeightedSubtreeMove) {
+  Aux::Random::setSeed(37, false);
+  std::vector<std::vector<int64_t>>  editCostMatrix;
+  editCostMatrix.resize(34);
+  for(count i = 0; i< editCostMatrix.size(); i++){
+    editCostMatrix[i].resize(34);
+  }
+
+  count minimum = 21;
+	Graph karate = METISGraphReader().read("input/karate.graph");
+  karate.indexEdges();
+  for(node u = 0; u < karate.upperNodeIdBound(); u++){
+    for(node v = 0; v < karate.upperNodeIdBound(); v++){
+      if(karate.hasEdge(u,v)){
+        editCostMatrix[u][v] = 2;
+        editCostMatrix[v][u] = 2;
+      }
+      else{
+        editCostMatrix[u][v] = -2;
+        editCostMatrix[v][u] = -2;
+      }
+    }
+  }
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(karate, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 20, true, false, true, 4UL, true, 1, 1, editCostMatrix);
+  mover.run();
+  Graph Q = mover.getQuasiThresholdGraph();
+  count used = mover.getNumberOfEdits();
+  count usedWeight = mover.getWeightOfEdits();
+  assert(used >= minimum);
+  
+  std::vector<std::pair<std::pair<node, node>, bool>> edits;
+  for(node u = 0; u < karate.upperNodeIdBound(); u++){
+    for(node v = u+1; v < karate.upperNodeIdBound(); v++){
+      if(Q.hasEdge(u,v) && !karate.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 1));
+      }
+      if(!Q.hasEdge(u,v) && karate.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 0));
+      }
+    }
+  }
+  
+  assert(edits.size() == used);
+   
+  count pow_set_size = pow(2, used-minimum);
+  INFO(used-minimum, " edits away from minimum");
+  INFO(used, "," , edits.size()," Number of Edits");
+  INFO(usedWeight, " Weight of Edits");
+
+  GraphDifference difference(karate, Q);
+  difference.run();
+  count edgeRemovals = difference.getNumberOfEdgeRemovals();
+  count edgeInsertions = difference.getNumberOfEdgeAdditions();
+  INFO(edgeRemovals, " Remove Edits");
+  INFO(edgeInsertions,  " Insert Edits");
+}
+
 TEST_F(CommunityGTest, testRandomness) {
   /*  o - x - o
      | 
