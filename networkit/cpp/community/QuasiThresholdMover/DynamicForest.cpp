@@ -325,9 +325,8 @@ void DynamicForest::moveToPosition(node u, node p, const std::vector<node> &adop
     assert(pathsValid());
 }
 
-void DynamicForest::moveToAnyPosition(node u, node p, const std::vector<node> &adoptedChildren) {
+void DynamicForest::moveToAnyPosition(node u, const std::vector<node> &adoptedChildren) {
     // check that the node is isolated
-    pid parentPath = path(p);
     pid oldPath = path(u);
     std::vector<node> oldChildren;
     node oldParent;

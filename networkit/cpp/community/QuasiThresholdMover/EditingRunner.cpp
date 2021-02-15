@@ -560,7 +560,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
 #endif
     }
     if(moveSubtrees && curChildren.size() > 0){
-        dynamicForest.moveToAnyPosition(nodeToMove, rootData.bestParentBelow, curChildren);
+        dynamicForest.moveToAnyPosition(nodeToMove, curChildren);
         numEdits = countNumberOfEdits();
         weightEdits = countWeightOfEdits();
     }
