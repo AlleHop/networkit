@@ -183,6 +183,11 @@ private:
     std::vector<node> bestChildren;
 
     count subtreeSize;
+    std::vector<bool> inSubtree;
+    std::vector<count> numNeighborsAll;
+    count subtreeExtDegree = 0;
+    count subtreeEditCost = 0;
+    count subtreeEdits = 0;
 
     std::vector<bool> existing;
 
