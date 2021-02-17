@@ -275,8 +275,8 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     curEdits = numNeighbors;
     subtreeSize = 0;
     subtreeExtDegree = 0;
-    subtreeEditCost = 0;
-    subtreeEdits = 0;
+    curSubtreeEditCost = 0;
+    curSubtreeEdits = 0;
     if (!insertRun) {
         //check with theory. delete edges for ancestors or children
         // Calculate the old number of edits incident to c to be able to compute the improvement
@@ -525,12 +525,6 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     int64_t savedEdits = curEdits - bestEdits;
     count savedEditsWeight = curEditsWeight - bestEditsWeight;
 
-    // cleanup for linear move
-    for (node u : touchedNodes) {
-        lastVisitedDFSNode[u] = u;
-        nodeTouched[u] = false;
-    }
-
     assert(!randomness || rootData.hasChoices());
 
     if (rootData.logEqualBestChoices < std::log(std::numeric_limits<long long>::max())) {
@@ -538,13 +532,6 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     } else {
         rootEqualBestParentsCpy = std::numeric_limits<count>::max();
     }
-
-    for (node v : neighbors) {
-        marker[v] = false;
-    }
-    neighbors.clear();
-    touchedNodes.clear();
-    subtreeNodes.clear();
 
     if (sortPaths || savedEditsWeight > 0 || randomness) {
         dynamicForest.moveToPosition(nodeToMove, rootData.bestParentBelow, bestChildren);
@@ -566,6 +553,45 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
 #endif
     }
 
+    if(moveSubtrees && subtreeSize > 1){
+        G.forNodes([&](node v) {
+            if(!inSubtree[v]) {
+                if ((traversalData[v].childClosenessWeight > 0 && nodeTouched[v] )||
+                    (!editMatrixUsed && numNeighborsAll[v] >= 0) ||
+                    (editMatrixUsed && editCostSubtree[v] >= 0)) {
+                    parentCandidates.push_back(v);
+                }
+            }
+        });
+
+        if (useBucketQueue) {
+            bucketQueue.fill(parentCandidates, dynamicForest);
+        } else {
+            //put all neighbors in a queue and sort it based on forest depth
+            for (node v : parentCandidates) {
+                parentQueue.emplace_back(v);
+            }
+            std::stable_sort(parentQueue.begin(), parentQueue.end(), [&](node u, node v) {
+                return dynamicForest.depth(u) < dynamicForest.depth(v);
+            });
+        }
+
+
+    }
+
+
+
+    // cleanup for linear move
+    for (node u : touchedNodes) {
+        lastVisitedDFSNode[u] = u;
+        nodeTouched[u] = false;
+    }
+    for (node v : neighbors) {
+        marker[v] = false;
+    }
+    neighbors.clear();
+    touchedNodes.clear();
+    subtreeNodes.clear();
     //Optimize: only reset necessary values
     std::fill(inSubtree.begin(), inSubtree.end(), false);
     std::fill(numNeighborsAll.begin(), numNeighborsAll.end(), 0);

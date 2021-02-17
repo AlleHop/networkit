@@ -45,6 +45,8 @@ private:
         int64_t childCloseness;
         int64_t scoreMaxWeight;
         int64_t childClosenessWeight;
+        int64_t subtreeEdits;
+        int64_t subtreeEditCosts;
         node bestParentBelow;
         /**
          * Logarithm of the number of equally good choices for this node.
@@ -58,6 +60,7 @@ private:
         TraversalData()
             : generation(none), scoreMax(0), childCloseness(0), scoreMaxWeight(0),
               childClosenessWeight(0), bestParentBelow(none),
+              subtreeEdits(0), subtreeEditCosts(0),
               logEqualBestChoices(-std::numeric_limits<double>::infinity()),
               numIndifferentChildren(0), numCloseChildren(0){};
 
@@ -68,6 +71,8 @@ private:
                 childCloseness = 0;
                 scoreMaxWeight = 0;
                 childClosenessWeight = 0;
+                subtreeEdits = 0;
+                subtreeEditCosts = 0;
                 bestParentBelow = none;
                 logEqualBestChoices = -std::numeric_limits<double>::infinity();
                 numIndifferentChildren = 0;
@@ -127,6 +132,8 @@ private:
             ss << "childCloseness: " << childCloseness << "\n";
             ss << "scoreMaxWeight: " << scoreMaxWeight << "\n";
             ss << "childClosenessWeight: " << childClosenessWeight << "\n";
+            ss << "subtreeEdits: " << subtreeEdits << "\n";
+            ss << "subtreeEditCosts: " << subtreeEditCosts << "\n";
             ss << "logEqualBestChoices: " << logEqualBestChoices << "\n";
             ss << "bestParentBelow: " << bestParentBelow << "\n";
             return ss.str();
@@ -186,10 +193,12 @@ private:
     std::vector<bool> inSubtree;
     std::vector<count> numNeighborsAll;
     std::vector<node> subtreeNodes;
+    std::vector<node> parentCandidates;
+    std::vector<node> parentQueue;
     std::vector<int64_t> editCostSubtree;
     count subtreeExtDegree = 0;
-    count subtreeEditCost = 0;
-    count subtreeEdits = 0;
+    count curSubtreeEditCost = 0;
+    count curSubtreeEdits = 0;
 
     std::vector<bool> existing;
 
