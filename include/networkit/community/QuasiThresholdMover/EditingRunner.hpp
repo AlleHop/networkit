@@ -185,6 +185,8 @@ private:
     count subtreeSize;
     std::vector<bool> inSubtree;
     std::vector<count> numNeighborsAll;
+    std::vector<node> subtreeNodes;
+    std::vector<int64_t> editCostSubtree;
     count subtreeExtDegree = 0;
     count subtreeEditCost = 0;
     count subtreeEdits = 0;

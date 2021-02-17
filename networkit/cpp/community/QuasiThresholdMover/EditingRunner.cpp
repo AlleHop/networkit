@@ -290,6 +290,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
                     if(moveSubtrees){
                         subtreeSize++;
                         inSubtree[c] = true;
+                        subtreeNodes.push_back(c);
                     }
                     if(editMatrixUsed){
                         curEditsWeight += 1 * (-1) * editCostNodeToMove[c] - marker[c] * ((-1) * editCostNodeToMove[c] + editCostNodeToMove[c]);
@@ -297,6 +298,12 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
                     else{
                         curEditsWeight += 1 * insertEditCost - marker[c] * (insertEditCost + removeEditCost);//TODO weights
                     }
+                }
+                else if(moveSubtrees) {
+                    //FIXME count nodeToMove to subtree?
+                    subtreeSize++;
+                    inSubtree[c] = true;
+                    subtreeNodes.push_back(c);
                 }
             },
             [](node) {});
@@ -309,40 +316,38 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
             else{
                 curEditsWeight += 1  * insertEditCost - marker[p] * (insertEditCost + removeEditCost);//TODO weights  
             }
-            if(moveSubtrees){
-                dynamicForest.forChildrenOf(nodeToMove, [&](node c) {
-                    if(!G.hasEdge(p,c)){
-                        if(editMatrixUsed){
-                            subtreeEditCost +=  (-1) * editCostMatrix[c][p];
-                        }
-                        else{
-                            subtreeEditCost += insertEditCost;                     
-                        }
-                    subtreeEdits += 1;
-                    }
-                });
-            }
         });
     }
 
-    if(moveSubtrees){
-		dynamicForest.dfsFrom(nodeToMove, [&](node d) {
-			G.forNeighborsOf(d, [&](node v) {
-				if (!inSubtree[v] && d != nodeToMove) {
+    if(moveSubtrees && subtreeSize > 1){
+    	dynamicForest.dfsFrom(nodeToMove, [&](node d) {
+		    G.forNeighborsOf(d, [&](node v) {
+				if (!inSubtree[v]) {
 					++numNeighborsAll[v];
 					++subtreeExtDegree;
 				}
 			});
 		}, [](node) {});
+
+        if(editMatrixUsed){
+            editCostSubtree = editCostMatrix[nodeToMove];
+            for ( node v : subtreeNodes){
+                if(v != nodeToMove){
+                    std::transform(editCostSubtree.begin(), editCostSubtree.end(), editCostMatrix[v].begin(),
+                        editCostSubtree.begin(), std::plus<int64_t>());
+                }
+
+            }
+        }
     }
-    //subtreeEdits = subtreeExtDegree;
-    assert((subtreeSize == 0 && subtreeEditCost == 0 && subtreeExtDegree == 0) || (subtreeSize > 0 && subtreeEditCost >= 0));
+
     TRACE("IsLowerEnd: ", dynamicForest.isLowerEnd(dynamicForest.parent(nodeToMove)));
-    //first step of algorithm; isolate node
-    TRACE("Subtreesize:", subtreeSize, " EditCost: ", subtreeEditCost, " Edits: ", subtreeEdits);
+    TRACE("Subtreesize:", subtreeSize);
     TRACE("Children: ", dynamicForest.children(nodeToMove));
     TRACE("Parent: ", dynamicForest.parent(nodeToMove));
     TRACE(dynamicForest.printPaths());
+
+    //first step of algorithm; isolate node
     dynamicForest.isolate(nodeToMove);
     //sort path optimization
     if (sortPaths) {
@@ -539,6 +544,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     }
     neighbors.clear();
     touchedNodes.clear();
+    subtreeNodes.clear();
 
     if (sortPaths || savedEditsWeight > 0 || randomness) {
         dynamicForest.moveToPosition(nodeToMove, rootData.bestParentBelow, bestChildren);
@@ -559,13 +565,10 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
         assert(weightEdits == countWeightOfEdits());
 #endif
     }
-    if(moveSubtrees && curChildren.size() > 0){
-        dynamicForest.moveToAnyPosition(nodeToMove, curChildren);
-        numEdits = countNumberOfEdits();
-        weightEdits = countWeightOfEdits();
-    }
 
+    //Optimize: only reset necessary values
     std::fill(inSubtree.begin(), inSubtree.end(), false);
+    std::fill(numNeighborsAll.begin(), numNeighborsAll.end(), 0);
 }
 
 void EditingRunner::processNode(node u, node nodeToMove, count generation) {
