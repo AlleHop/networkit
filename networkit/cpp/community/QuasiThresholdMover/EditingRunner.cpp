@@ -520,6 +520,23 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     compareWithQuadratic(nodeToMove, generation);
 #endif
 
+    if(moveSubtrees && subtreeSize > 1){
+        //correct child closenesee above subtree
+        int64_t sumChildCloseness = 0;
+        int64_t sumChildClosenessWeight = 0;
+        for( node c : curChildren){
+            sumChildCloseness += traversalData[c].childCloseness;
+            sumChildClosenessWeight += traversalData[c].childClosenessWeight;
+            dynamicForest.forAncestors(c, [&](node p) {
+                traversalData[p].childCloseness -= traversalData[c].childCloseness;
+                traversalData[p].childClosenessWeight -= traversalData[c].childClosenessWeight;
+            });
+        }
+        assert(sumChildClosenessWeight >= 0);
+
+
+    }
+
     // calculate the number of saved edits as comparing the absolute number of edits doesn't make
     // sense
     int64_t savedEdits = curEdits - bestEdits;
@@ -556,8 +573,9 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     if(moveSubtrees && subtreeSize > 1){
         G.forNodes([&](node v) {
             if(!inSubtree[v]) {
+                //fill queue with candidates with positive editCost or positive childcloseness
                 if ((traversalData[v].childClosenessWeight > 0 && nodeTouched[v] )||
-                    (!editMatrixUsed && numNeighborsAll[v] >= 0) ||
+                    (!editMatrixUsed && (2 * numNeighborsAll[v] - subtreeSize)>= 0) ||
                     (editMatrixUsed && editCostSubtree[v] >= 0)) {
                     parentCandidates.push_back(v);
                 }
@@ -592,7 +610,7 @@ void EditingRunner::localMove(node nodeToMove, count generation) {
     neighbors.clear();
     touchedNodes.clear();
     subtreeNodes.clear();
-    //Optimize: only reset necessary values
+    //TODO Optimize: only reset necessary values
     std::fill(inSubtree.begin(), inSubtree.end(), false);
     std::fill(numNeighborsAll.begin(), numNeighborsAll.end(), 0);
 }
