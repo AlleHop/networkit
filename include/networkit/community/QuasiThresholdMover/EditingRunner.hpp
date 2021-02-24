@@ -46,6 +46,8 @@ private:
         int64_t scoreMaxWeight;
         int64_t childClosenessWeight;
         int64_t subtreeEdits;
+        int64_t sumPositiveEdits;
+        int64_t sumPositiveEditsWeight;
         int64_t subtreeEditCosts;
         node bestParentBelow;
         /**
@@ -71,6 +73,37 @@ private:
                 childCloseness = 0;
                 scoreMaxWeight = 0;
                 childClosenessWeight = 0;
+                sumPositiveEdits = 0;
+                sumPositiveEditsWeight = 0;
+                subtreeEdits = 0;
+                subtreeEditCosts = 0;
+                bestParentBelow = none;
+                logEqualBestChoices = -std::numeric_limits<double>::infinity();
+                numIndifferentChildren = 0;
+                numCloseChildren = 0;
+            }
+        };
+
+        void initializeForSubtree(count currentGeneration) {
+            //keep childCloseness for Subtree Move
+            if (currentGeneration == generation +1 ) {
+                generation = currentGeneration;
+                scoreMax = 0;
+                scoreMaxWeight = 0;
+                subtreeEdits = 0;
+                subtreeEditCosts = 0;
+                bestParentBelow = none;
+                logEqualBestChoices = -std::numeric_limits<double>::infinity();
+                numIndifferentChildren = 0;
+                numCloseChildren = 0;
+            } else if (currentGeneration != generation) {
+                generation = currentGeneration;
+                scoreMax = 0;
+                childCloseness = 0;
+                scoreMaxWeight = 0;
+                childClosenessWeight = 0;
+                sumPositiveEdits = 0;
+                sumPositiveEditsWeight = 0;
                 subtreeEdits = 0;
                 subtreeEditCosts = 0;
                 bestParentBelow = none;
@@ -164,6 +197,7 @@ private:
     bool hasMoved;
     std::vector<bool> marker;
 
+    count generation;
     count level;
     std::vector<node> neighborQueue;
     std::vector<node> currentLevel;
@@ -220,10 +254,11 @@ private:
     std::vector<std::pair<std::string, Aux::PerfEventCountHardware>> event_counters;
     std::map<std::string, std::vector<count>> runningInfo;
 
-    void localMove(node nodeToMove, count generation);
-    void processNode(node u, node nodeToMove, count generation);
+    void localMove(node nodeToMove);
+    void processNode(node u, node nodeToMove);
+    void processNodeForSubtree(node u, node nodeToMove);
     Graph getGraphFromEditMatrix();
-    void compareWithQuadratic(node nodeToMove, count generation) const;
+    void compareWithQuadratic(node nodeToMove) const;
     count countNumberOfEdits() const;
     count countWeightOfEdits() const;
     count editsIncidentTo(node u) const;
