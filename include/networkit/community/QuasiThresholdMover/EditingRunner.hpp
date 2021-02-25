@@ -223,6 +223,7 @@ private:
     std::vector<node> curChildren;
     std::vector<node> bestChildren;
 
+    count numSubtreeMoves;
     count subtreeSize;
     std::vector<bool> inSubtree;
     std::vector<count> numNeighborsAll;
@@ -230,6 +231,7 @@ private:
     std::vector<node> parentCandidates;
     std::vector<node> parentQueue;
     std::vector<int64_t> editCostSubtree;
+    std::vector<bool> nodeTouchedSubtree;
     count subtreeExtDegree = 0;
     count curSubtreeEditCost = 0;
     count curSubtreeEdits = 0;
