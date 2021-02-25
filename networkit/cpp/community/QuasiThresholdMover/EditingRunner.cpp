@@ -589,10 +589,27 @@ void EditingRunner::localMove(node nodeToMove) {
             sumChildClosenessWeight += traversalData[c].childClosenessWeight;
             assert(dynamicForest.parent(c)== nodeToMove);
         }
+
+        rootData.childCloseness -= sumChildCloseness;
+        rootData.childClosenessWeight -= sumChildClosenessWeight;
+        if( sumChildClosenessWeight > rootData.sumPositiveEditsWeight){
+            rootData.sumPositiveEdits = 0;
+            rootData.sumPositiveEditsWeight = 0;
+        } else {
+            rootData.sumPositiveEdits -= sumChildCloseness;
+            rootData.sumPositiveEditsWeight -= sumChildClosenessWeight;
+        }
     
         dynamicForest.forAncestors(nodeToMove, [&](node p) {
             traversalData[p].childCloseness -= sumChildCloseness;
             traversalData[p].childClosenessWeight -= sumChildClosenessWeight;
+            if( sumChildClosenessWeight > traversalData[p].sumPositiveEditsWeight){
+                traversalData[p].sumPositiveEdits = 0;
+                traversalData[p].sumPositiveEditsWeight = 0;
+            } else {
+                traversalData[p].sumPositiveEdits -= sumChildCloseness;
+                traversalData[p].sumPositiveEditsWeight -= sumChildClosenessWeight;
+            }
         });
 
         //add candidates to queue
@@ -618,6 +635,9 @@ void EditingRunner::localMove(node nodeToMove) {
                 return dynamicForest.depth(u) < dynamicForest.depth(v);
             });
         }
+
+        bestChildren.clear();
+        rootData.initializeForSubtree(generation);
 
         if (useBucketQueue) {
             while (!bucketQueue.empty()) {
@@ -648,9 +668,8 @@ void EditingRunner::localMove(node nodeToMove) {
             }
         }
 
-        TRACE("Best Parent ", rootData.bestParentBelow);
+        TRACE("Best Parent for Subtree ", rootData.bestParentBelow);
 
-        bestChildren.clear();
         if (!randomness) {
             if (rootData.childClosenessWeight > rootData.scoreMaxWeight) {
                 rootData.bestParentBelow = none;
@@ -1037,8 +1056,9 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
     }
 
         //TODO check if correct with weights
-    int64_t sumPositiveEdits = traversalData[u].childCloseness;
-    int64_t sumPositiveEditsWeight = traversalData[u].childClosenessWeight;
+    int64_t sumPositiveEdits = traversalData[u].sumPositiveEdits;
+    int64_t sumPositiveEditsWeight = traversalData[u].sumPositiveEditsWeight;
+    assert(sumPositiveEditsWeight >=0);
 
     TRACE("Edit difference before descending: ", traversalData[u].childCloseness, ", ", traversalData[u].childClosenessWeight);
     TRACE("Edit difference after descending: ", traversalData[u].childCloseness, ", ", traversalData[u].childClosenessWeight);
