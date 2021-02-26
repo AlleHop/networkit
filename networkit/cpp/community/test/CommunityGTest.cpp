@@ -912,8 +912,8 @@ TEST_F(CommunityGTest, testInclusionMinimal) {
 
 TEST_F(CommunityGTest, testInclusionMinimalWeightedCost) {
   Aux::Random::setSeed(37, false);
-  count removeEditCost = 2;
-  count insertEditCost = 5;
+  count removeEditCost = 5;
+  count insertEditCost = 2;
   count minimum = 21;
 	Graph karate = METISGraphReader().read("input/karate.graph");
   karate.indexEdges();
@@ -1336,15 +1336,19 @@ TEST_F(CommunityGTest, testQuasiThresholdMovingCompareOptions) {
       bool sortPaths = 0;
       for(int k = 0; k < 2; k++, sortPaths = !sortPaths){
         bool randomness = 0;
-        for(int l = 0; l < 2; l++, randomness = !randomness){
-          QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(G, initialization, run, sortPaths, randomness);
-          mover.run();
-          INFO( "Intialization: ", initialization,
+        for(int m = 0; m < 2; m++, randomness = !randomness){
+         bool subtreeMove = 0;
+         for(int l = 0; l < 2; l++, subtreeMove = !subtreeMove){
+           QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(G, initialization, run, sortPaths, randomness, subtreeMove);
+           mover.run();
+           INFO( "Intialization: ", initialization,
                 ", Runs: ", run,
                 ", sortPaths: ", sortPaths,
                 ", randomness: ", randomness,
+                ", subtreeMove: ", subtreeMove,                
                 "----- Edits: ", mover.getNumberOfEdits(),
                 " used ", mover.getUsedIterations());
+         }
         }
       }
     }

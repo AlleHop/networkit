@@ -332,10 +332,6 @@ void DynamicForest::moveToAnyPosition(node u, const std::vector<node> &adoptedCh
     node oldParent;
 #ifndef NDEBUG
     TRACE(printPaths());
-    //assert(paths[oldPath].parent == none);
-    //assert(parent(u) == p);
-    //assert(childCount(u) == 0);
-    //assert(paths[path(u)].length() == 1);
 #endif
     // place all children below node
     if (u != none && !isLowerEnd(u) && adoptedChildren.size() > 0) {
@@ -348,10 +344,10 @@ void DynamicForest::moveToAnyPosition(node u, const std::vector<node> &adoptedCh
             setParentPath(path(child), path(u));
             oldChildren = children(oldParent);
         }
-        if(paths[path(u)].childPaths.size() == 1 && adoptedChildren.size() == 1){
+        if(u != none && paths[path(u)].childPaths.size() == 1 && adoptedChildren.size() == 1){
             unionPaths(path(u), path(adoptedChildren[0]));
         }
-        if(paths[path(oldParent)].childPaths.size() == 1){
+        if(oldParent != none && paths[path(oldParent)].childPaths.size() == 1){
             unionPaths(path(oldParent), path(oldChildren[0]));
         }
     }
