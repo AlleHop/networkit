@@ -1019,7 +1019,7 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrix) {
 	int pos;
   std::vector<int64_t> LINE;
 
-	std::ifstream in("../input/biological/weights/bio-nr-3261-size-13.csv");
+	std::ifstream in("../input/biological/weights/bio-nr-1897-size-23.csv");
 	if(!in.is_open())
 	{
 		std::cout << "Failed to open file" << std::endl;
@@ -1038,13 +1038,13 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrix) {
 		editCostMatrix.push_back(ln);
 	}
   for(count i = 0; i< editCostMatrix.size(); i++){
-    editCostMatrix[i].resize(13);
+    editCostMatrix[i].resize(23);
   }
 
-  count minimum = 5122;
-	Graph graph = METISGraphReader().read("../input/biological/graphs/bio-nr-3261-size-13.graph");
+  count minimum = 3201;
+	Graph graph = METISGraphReader().read("../input/biological/graphs/bio-nr-1897-size-23.graph");
   graph.indexEdges();
-  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(graph, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 5, true, true, false, 5UL, true,1,1,editCostMatrix);
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(graph, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 100, true, true, false, 10UL, true,1,1,editCostMatrix);
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
@@ -1066,7 +1066,7 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrix) {
   assert(edits.size() == used);
    
   count pow_set_size = pow(2, usedWeight-minimum);
-  INFO(used-minimum, " edits Cost away from minimum");
+  INFO(usedWeight-minimum, " edits Cost away from minimum");
   INFO(used, "," , edits.size()," Number of Edits");
   INFO(usedWeight, " Weight of Edits");
 
@@ -1185,6 +1185,75 @@ TEST_F(CommunityGTest, testWeightedMatrixSubtreeMoveRnd) {
   INFO(usedWeight, " Weight of Edits");
 
   GraphDifference difference(karate, Q);
+  difference.run();
+  count edgeRemovals = difference.getNumberOfEdgeRemovals();
+  count edgeInsertions = difference.getNumberOfEdgeAdditions();
+  INFO(edgeRemovals, " Remove Edits");
+  INFO(edgeInsertions,  " Insert Edits");
+}
+
+TEST_F(CommunityGTest, testBioWeightedCostMatrixSubtreeMove) {
+  std::string str;
+  //std::getline(std::cin, str);
+  Aux::Random::setSeed(1, false);
+  std::vector<std::vector<int64_t>>  editCostMatrix;
+  //editCostMatrix.resize(13);
+  std::string line;
+	int pos;
+  std::vector<int64_t> LINE;
+
+	std::ifstream in("../input/biological/weights/bio-nr-1897-size-23.csv");
+	if(!in.is_open())
+	{
+		std::cout << "Failed to open file" << std::endl;
+	}
+	while( std::getline(in,line) )
+	{
+		std::vector<int64_t> ln;
+		while( (pos = line.find(',')) >= 0)
+		{
+			int64_t field = std::stoi(line.substr(0,pos));
+			line = line.substr(pos+1);
+			ln.push_back(field);
+		}
+    int64_t rest = std::stoi(line);
+    ln.push_back(rest);
+		editCostMatrix.push_back(ln);
+	}
+  for(count i = 0; i< editCostMatrix.size(); i++){
+    editCostMatrix[i].resize(23);
+  }
+
+  count minimum = 3201;
+	Graph graph = METISGraphReader().read("../input/biological/graphs/bio-nr-1897-size-23.graph");
+  graph.indexEdges();
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(graph, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 100, true, true, true, 10UL, true,1,1,editCostMatrix);
+  mover.run();
+  Graph Q = mover.getQuasiThresholdGraph();
+  count used = mover.getNumberOfEdits();
+  count usedWeight = mover.getWeightOfEdits();
+  assert(usedWeight >= minimum);
+  
+  std::vector<std::pair<std::pair<node, node>, bool>> edits;
+  for(node u = 0; u < graph.upperNodeIdBound(); u++){
+    for(node v = u+1; v < graph.upperNodeIdBound(); v++){
+      if(Q.hasEdge(u,v) && !graph.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 1));
+      }
+      if(!Q.hasEdge(u,v) && graph.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 0));
+      }
+    }
+  }
+  
+  assert(edits.size() == used);
+   
+  count pow_set_size = pow(2, usedWeight-minimum);
+  INFO(usedWeight-minimum, " edits Cost away from minimum");
+  INFO(used, "," , edits.size()," Number of Edits");
+  INFO(usedWeight, " Weight of Edits");
+
+  GraphDifference difference(graph, Q);
   difference.run();
   count edgeRemovals = difference.getNumberOfEdgeRemovals();
   count edgeInsertions = difference.getNumberOfEdgeAdditions();
