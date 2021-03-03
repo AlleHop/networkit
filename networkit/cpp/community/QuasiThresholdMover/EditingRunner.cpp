@@ -597,27 +597,27 @@ void EditingRunner::localMove(node nodeToMove) {
         //sum childCloseness has to be positive because only then we adopt children
         assert(sumChildClosenessWeight >= 0);
 
-        //correct rootdata
-        //rootData.childCloseness -= sumChildCloseness;
-        //rootData.childClosenessWeight -= sumChildClosenessWeight;
-        if( sumChildClosenessWeight > rootData.sumPositiveEditsWeight){
-            rootData.sumPositiveEdits = 0;
-            rootData.sumPositiveEditsWeight = 0;
-        } else {
+        node parentOfAncestor;
+        if(curParent== none){
             rootData.sumPositiveEdits -= sumChildCloseness;
             rootData.sumPositiveEditsWeight -= sumChildClosenessWeight;
+        } else {
+            traversalData[curParent].sumPositiveEdits -= sumChildCloseness;
+            traversalData[curParent].sumPositiveEditsWeight -= sumChildClosenessWeight;
         }
-    
         dynamicForest.forAncestors(nodeToMove, [&](node p) {
+            if(traversalData[p].childClosenessWeight >= 0){
+                parentOfAncestor = dynamicForest.parent(p);
+                if(parentOfAncestor == none){
+                    rootData.sumPositiveEdits -= traversalData[p].childCloseness;
+                    rootData.sumPositiveEditsWeight -= traversalData[p].childClosenessWeight;
+                } else {
+                    traversalData[parentOfAncestor].sumPositiveEdits -= traversalData[p].childCloseness;
+                    traversalData[parentOfAncestor].sumPositiveEditsWeight -= traversalData[p].childClosenessWeight;
+                }
+            }  
             traversalData[p].childCloseness -= sumChildCloseness;
             traversalData[p].childClosenessWeight -= sumChildClosenessWeight;
-            if( sumChildClosenessWeight > traversalData[p].sumPositiveEditsWeight){
-                traversalData[p].sumPositiveEdits = 0;
-                traversalData[p].sumPositiveEditsWeight = 0;
-            } else {
-                traversalData[p].sumPositiveEdits -= sumChildCloseness;
-                traversalData[p].sumPositiveEditsWeight -= sumChildClosenessWeight;
-            }
         });
 
         //add parent candidates to queue
@@ -696,11 +696,11 @@ void EditingRunner::localMove(node nodeToMove) {
                 rootData.logEqualBestChoices = ownWeight;
                 coin = true;
             } else if (rootData.sumPositiveEditsWeight == rootData.scoreMaxWeight) {
-                ownWeight = rootData.calculateOwnWeightForEqualChoices();
-                if (ownWeight > -std::numeric_limits<double>::infinity()) {
-                    rootData.addLogChoices(ownWeight);
-                    coin = logRandomBool(ownWeight - rootData.logEqualBestChoices);
-                }
+                //TODO ignore?
+                //ownWeight = rootData.calculateOwnWeightForEqualChoices();
+                //TODO if ausbauen
+                rootData.addLogChoices(ownWeight);
+                coin = logRandomBool(ownWeight - rootData.logEqualBestChoices);
                 // INFO("root equally good");
             }
             if (coin) {
@@ -728,65 +728,19 @@ void EditingRunner::localMove(node nodeToMove) {
             || (randomness && bestParentData.numIndifferentChildren > 1)) {
             std::vector<node> indifferentChildren;
             for (node u : touchedNodes) {
-                if (u != nodeToMove && dynamicForest.parent(u) == rootData.bestParentBelow) {
+                if (u != nodeToMove && dynamicForest.parent(u) == rootData.bestParentBelow && nodeTouched[u]) {
                     if (traversalData[u].childClosenessWeight > 0) {
                         bestChildren.push_back(u);
                     } else if (randomness && traversalData[u].childClosenessWeight == 0) {
-                        indifferentChildren.push_back(u);
+                        //indifferentChildren.push_back(u);
+                        //direclty insert into bestChildren based on coin toss
+                        if (randomBool(2)) {
+                            bestChildren.push_back(u);
+                        }              
                     }
                 }
             }
-            assert(bestChildren.size() == bestParentData.numCloseChildren || curParent == bestParentData.bestParentBelow);
-
-            if (randomness) { // make sure we adopt either 0 or at least two children
-                assert(indifferentChildren.size() == bestParentData.numIndifferentChildren);
-                // If we shall adopt one child, there must be another indifferent child that we just
-                // sample randomly to get at least two
-                if (bestChildren.size() == 1 && !indifferentChildren.empty()) {
-                    //for subtreemove adopting one child should be ok
-                    //assert(!indifferentChildren.empty());
-                    index i = Aux::Random::index(indifferentChildren.size());
-                    bestChildren.push_back(indifferentChildren[i]);
-                    indifferentChildren[i] = indifferentChildren.back();
-                    indifferentChildren.pop_back();
-                }
-
-                // If there are no best children, sample either 0 or at least two indifferent children
-                if (bestChildren.empty() && !indifferentChildren.empty()) {
-                    assert(indifferentChildren.size() != 1);
-                    if (indifferentChildren.size() == 2) {
-                        // Sample either 0 or two nodes from indifferentChildren
-                        if (randomBool(2)) {
-                            for (node u : indifferentChildren) {
-                                bestChildren.push_back(u);
-                            }
-                        }
-                    } else {
-                        // sample either 0 or at least two nodes from indifferentChildren
-                        std::vector<node> sample;
-                        do {
-                            sample.clear();
-                            for (node u : indifferentChildren) {
-                                if (randomBool(2)) {
-                                    sample.push_back(u);
-                                }
-                            }
-                        } while (sample.size() == 1);
-
-                        for (node u : sample) {
-                            bestChildren.push_back(u);
-                        }
-                    }
-                } else if (bestChildren.size() > 1) {
-                    // If there are already two children, just sample randomly from the remaining
-                    // indifferent children
-                    for (node u : indifferentChildren) {
-                        if (randomBool(2)) {
-                            bestChildren.push_back(u);
-                        }
-                    }
-                }
-            }
+            assert(randomness || bestChildren.size() == bestParentData.numCloseChildren);
         }
 
         // calculate the number of saved edits as comparing the absolute number of edits doesn't make
@@ -805,6 +759,7 @@ void EditingRunner::localMove(node nodeToMove) {
         TRACE("Best Parent for Subtree ", rootData.bestParentBelow);
         TRACE("Best adopted Children for Subtree ", bestChildren);
         if (savedEditsWeight > 0 || randomness) {
+            assert(savedEditsWeight >= 0);
             std::vector<node> vect{ nodeToMove };
             TRACE("SubtreeMove: current Parent: ", curParent, " new Parent: ", rootData.bestParentBelow);
             dynamicForest.moveToAnyPosition(rootData.bestParentBelow, vect);
@@ -1040,7 +995,7 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
     TRACE("Parent: ", dynamicForest.parent(u), ", children: ", dynamicForest.children(u));
     assert(u != nodeToMove);
     tlx::unused(nodeToMove);
-    if (useBucketQueue) {
+    if (useBucketQueue && nodeTouchedSubtree[u]) {
         assert(dynamicForest.depth(u) <= maxDepth);
     }
     if (!nodeTouchedSubtree[u]) {
@@ -1088,11 +1043,9 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
             //assert(!sortPaths || sumPositiveEdits == 0 || dynamicForest.isLowerEnd(u));
             coin = true;
         } else if (sumPositiveEditsWeight == traversalData[u].scoreMaxWeight) {
-            ownWeight = traversalData[u].calculateOwnWeightForEqualChoices();
-            if (ownWeight > -std::numeric_limits<double>::infinity()) {
-                traversalData[u].addLogChoices(ownWeight);
-                coin = logRandomBool(ownWeight - traversalData[u].logEqualBestChoices);
-            }
+            //ownWeight = traversalData[u].calculateOwnWeightForEqualChoices();
+            traversalData[u].addLogChoices(ownWeight);
+            coin = logRandomBool(ownWeight - traversalData[u].logEqualBestChoices);
             assert(traversalData[u].hasChoices());
         }
         if (coin) {
@@ -1116,9 +1069,10 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
     TraversalData &parentData = (p == none) ? rootData : traversalData[p];
 
     parentData.initializeForSubtree(generation);
-    int64_t editCostParent = ((numNeighborsAll[p] * removeEditCost) + ((numNeighborsAll[p] - subtreeSize) * insertEditCost));
+
 
     if ((traversalData[u].scoreMaxWeight > 0 || traversalData[u].subtreeEditCosts > 0) && p != none) {
+        int64_t editCostParent = ((numNeighborsAll[p] * removeEditCost) + ((numNeighborsAll[p] - subtreeSize) * insertEditCost));
         if (useBucketQueue) {
             assert(dynamicForest.depth(p) <= maxDepth);
         }

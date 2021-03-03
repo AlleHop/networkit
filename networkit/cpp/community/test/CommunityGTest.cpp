@@ -1195,7 +1195,7 @@ TEST_F(CommunityGTest, testWeightedMatrixSubtreeMoveRnd) {
 TEST_F(CommunityGTest, testBioWeightedCostMatrixSubtreeMove) {
   std::string str;
   //std::getline(std::cin, str);
-  Aux::Random::setSeed(1, false);
+  Aux::Random::setSeed(0, false);
   std::vector<std::vector<int64_t>>  editCostMatrix;
   //editCostMatrix.resize(13);
   std::string line;
@@ -1227,7 +1227,7 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrixSubtreeMove) {
   count minimum = 3201;
 	Graph graph = METISGraphReader().read("../input/biological/graphs/bio-nr-1897-size-23.graph");
   graph.indexEdges();
-  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(graph, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 100, true, true, true, 10UL, true,1,1,editCostMatrix);
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(graph, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 400, true, true, true, 100UL, true,1,1,editCostMatrix);
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
