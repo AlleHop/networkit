@@ -52,9 +52,9 @@ EditingRunner::EditingRunner(const Graph &G,
 
     //check if edit Matrix has correct size
     editMatrixUsed = (editCostMatrix.size() != 0 && editCostMatrix.size() == G.upperNodeIdBound() );
-    if(editMatrixUsed){
-        //G = getGraphFromEditMatrix();
-    }
+    /*if(editMatrixUsed){
+        G = getGraphFromEditMatrix();
+    }*/
 
     timer.start();
     switch (initialization) {
@@ -511,14 +511,7 @@ void EditingRunner::localMove(node nodeToMove) {
     }
 
     if(moveSubtrees){
-        //increase generation by one to reuse childCloseness but reset everything else
-        generation++;
         subtreeSize = 0;
-        subtreeExtDegree = 0;
-        editCostNeighbors = 0;
-        curChildren = dynamicForest.children(nodeToMove);
-        curParent = dynamicForest.parent(nodeToMove);
-
         //calculate subtree size and nodes in subtree
         dynamicForest.dfsFrom(nodeToMove, [&](node c) {
             subtreeSize++;
@@ -526,13 +519,19 @@ void EditingRunner::localMove(node nodeToMove) {
             subtreeNodes.push_back(c);
 		}, [](node) {});
         TRACE("Subtreesize:", subtreeSize);
-        TRACE("Children: ", curChildren);
-        TRACE("Parent: ", curParent);
 
     }
 
     //subtreeMove when subtree is more than one node
-    if(moveSubtrees && subtreeSize > 1 && !insertRun){
+    if(moveSubtrees && subtreeSize > 1  && subtreeSize <= sqrt(G.upperNodeIdBound()) && !insertRun){
+        //increase generation by one to reuse childCloseness but reset everything else
+        generation++;
+        subtreeExtDegree = 0;
+        editCostNeighbors = 0;
+        curChildren = dynamicForest.children(nodeToMove);
+        curParent = dynamicForest.parent(nodeToMove);
+        TRACE("Children: ", curChildren);
+        TRACE("Parent: ", curParent);
         std::vector<int64_t> editCostNodeU = {};
         editCostNeighbors = 0;
         TRACE(dynamicForest.printPaths());
@@ -541,7 +540,7 @@ void EditingRunner::localMove(node nodeToMove) {
             if(editMatrixUsed){
                 editCostNodeU = editCostMatrix[u];
             }
-		    G.forNeighborsOf(u, [&](node v) {
+		    G.forEdgesOf(u, [&](node v) {
 				if (!inSubtree[v]) {
 					++numNeighborsAll[v];
                     ++subtreeExtDegree;
@@ -606,6 +605,7 @@ void EditingRunner::localMove(node nodeToMove) {
             traversalData[curParent].sumPositiveEditsWeight -= sumChildClosenessWeight;
         }
         dynamicForest.forAncestors(nodeToMove, [&](node p) {
+            //when childcloseness positive, change sumPosEdits of Parent
             if(traversalData[p].childClosenessWeight >= 0){
                 parentOfAncestor = dynamicForest.parent(p);
                 if(parentOfAncestor == none){
@@ -621,12 +621,12 @@ void EditingRunner::localMove(node nodeToMove) {
         });
 
         //add parent candidates to queue
+        //TODO get rid of forNodes?
         G.forNodes([&](node v) {
             if(!inSubtree[v]) {
-                int64_t editCost = ((numNeighborsAll[v] * removeEditCost) + ((numNeighborsAll[v] - subtreeSize) * insertEditCost));
                 //fill queue with candidates with positive editCost or positive childcloseness
                 if ((traversalData[v].childClosenessWeight > 0 && nodeTouched[v] ) ||
-                    (!editMatrixUsed && (editCost >= 0)) ||
+                    (!editMatrixUsed && (((numNeighborsAll[v] * removeEditCost) + ((numNeighborsAll[v] - subtreeSize) * insertEditCost)) >= 0)) ||
                     (editMatrixUsed && editCostSubtree[v] >= 0)) {
                     parentCandidates.push_back(v);
                 }
@@ -696,9 +696,6 @@ void EditingRunner::localMove(node nodeToMove) {
                 rootData.logEqualBestChoices = ownWeight;
                 coin = true;
             } else if (rootData.sumPositiveEditsWeight == rootData.scoreMaxWeight) {
-                //TODO ignore?
-                //ownWeight = rootData.calculateOwnWeightForEqualChoices();
-                //TODO if ausbauen
                 rootData.addLogChoices(ownWeight);
                 coin = logRandomBool(ownWeight - rootData.logEqualBestChoices);
                 // INFO("root equally good");
@@ -721,9 +718,7 @@ void EditingRunner::localMove(node nodeToMove) {
         // lower end of its path.
         const TraversalData &bestParentData =
             (rootData.bestParentBelow == none) ? rootData : traversalData[rootData.bestParentBelow];
-        // Check if there are any close children at all, or if there are no close children, if
-        // randomness is enabled and we have at least two indifferent children (one alone would not be
-        // adopted).
+        // For subtree move adopting one child is okay, because we have at least two children because of subtree
         if (bestParentData.numCloseChildren > 0
             || (randomness && bestParentData.numIndifferentChildren > 1)) {
             std::vector<node> indifferentChildren;
@@ -732,7 +727,6 @@ void EditingRunner::localMove(node nodeToMove) {
                     if (traversalData[u].childClosenessWeight > 0) {
                         bestChildren.push_back(u);
                     } else if (randomness && traversalData[u].childClosenessWeight == 0) {
-                        //indifferentChildren.push_back(u);
                         //direclty insert into bestChildren based on coin toss
                         if (randomBool(2)) {
                             bestChildren.push_back(u);
@@ -760,9 +754,9 @@ void EditingRunner::localMove(node nodeToMove) {
         TRACE("Best adopted Children for Subtree ", bestChildren);
         if (savedEditsWeight > 0 || randomness) {
             assert(savedEditsWeight >= 0);
-            std::vector<node> vect{ nodeToMove };
+            std::vector<node> nodeToMoveVec { nodeToMove };
             TRACE("SubtreeMove: current Parent: ", curParent, " new Parent: ", rootData.bestParentBelow);
-            dynamicForest.moveToAnyPosition(rootData.bestParentBelow, vect);
+            dynamicForest.moveToAnyPosition(rootData.bestParentBelow, nodeToMoveVec);
             dynamicForest.moveToAnyPosition(nodeToMove, bestChildren);
             hasMoved |= (savedEditsWeight > 0 || (randomness && rootEqualBestParentsCpy > 1));
             numNodesMoved += (savedEditsWeight > 0 || (randomness && rootEqualBestParentsCpy > 1));
@@ -1005,7 +999,7 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
         }
         assert( (traversalData[u].childClosenessWeight > 0 && nodeTouched[u]) || 
         (editMatrixUsed && editCostSubtree[u] >= 0) || 
-        (!editMatrixUsed && ((2 * numNeighborsAll[u] - subtreeSize) * insertEditCost) >= 0)); 
+        (!editMatrixUsed && (((numNeighborsAll[u] * removeEditCost) + ((numNeighborsAll[u] - subtreeSize) * insertEditCost)) >= 0))); 
         // only node with editCosts >= 0 are not touched and are processed
     }
 
@@ -1053,8 +1047,7 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
         }
     }
 
-    //not the case if we have a node with childCloseness < 0 and subtreeEditCost  = 0
-    //assert(traversalData[u].scoreMaxWeight >= 0);
+    assert(traversalData[u].scoreMaxWeight >= 0);
 
     traversalData[u].scoreMax += (2 * numNeighborsAll[u] - subtreeSize);
     if(editMatrixUsed){
@@ -1072,7 +1065,6 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
 
 
     if ((traversalData[u].scoreMaxWeight > 0 || traversalData[u].subtreeEditCosts > 0) && p != none) {
-        int64_t editCostParent = ((numNeighborsAll[p] * removeEditCost) + ((numNeighborsAll[p] - subtreeSize) * insertEditCost));
         if (useBucketQueue) {
             assert(dynamicForest.depth(p) <= maxDepth);
         }
@@ -1085,7 +1077,7 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
                 nextLevel.push_back(p);
             } else if (!(traversalData[p].childClosenessWeight > 0 && nodeTouched[p]) && 
                 !(editMatrixUsed && editCostSubtree[u] >= 0) && 
-                !(!editMatrixUsed && editCostParent >= 0)) { 
+                !(!editMatrixUsed && ((numNeighborsAll[p] * removeEditCost) + ((numNeighborsAll[p] - subtreeSize) * insertEditCost)) >= 0)) { 
                 // positive editcost already in queue
                 bucketQueue.insertParent(p);
             }
@@ -1112,8 +1104,6 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
         } else {
             ++parentData.numCloseChildren;
             //dont propagate childcloseness, already happend in local move
-            //parentData.childCloseness += traversalData[u].childCloseness;
-            //parentData.childClosenessWeight += traversalData[u].childClosenessWeight;
         }
     }
 }
@@ -1334,7 +1324,7 @@ count EditingRunner::countNumberOfEdits() const {
             [&](node u) { // on enter
                 count upperNeighbors = 0;
 
-                G.forNeighborsOf(u, [&](node v) {
+                G.forEdgesOf(u, [&](node v) {
                     if (marker[v])
                         ++upperNeighbors;
                 });
@@ -1374,7 +1364,7 @@ count EditingRunner::countWeightOfEdits() const {
                 if(editMatrixUsed){
                     editCostNodeU = editCostMatrix[u];
                 }
-                G.forNeighborsOf(u, [&](node v) {
+                G.forEdgesOf(u, [&](node v) {
                     if (marker[v]){
                         ++upperNeighbors;
                         //-remove
@@ -1438,7 +1428,7 @@ count EditingRunner::editsIncidentTo(node u) const {
             [&](node) {});
     });
 
-    G.forNeighborsOf(u, [&](node w) {
+    G.forEdgesOf(u, [&](node w) {
         if (!visited[w])
             edits++;
     });
