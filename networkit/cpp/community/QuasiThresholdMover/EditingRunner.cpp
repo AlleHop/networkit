@@ -387,6 +387,8 @@ void EditingRunner::localMove(node nodeToMove) {
             // INFO("root equally good");
         }
         if (coin) {
+            //correct scoremax incase root is equally good for weighted case
+            rootData.scoreMax = rootData.childCloseness;
             rootData.bestParentBelow = none;
         }
 
@@ -432,6 +434,8 @@ void EditingRunner::localMove(node nodeToMove) {
                 assert(!indifferentChildren.empty());
                 index i = Aux::Random::index(indifferentChildren.size());
                 bestChildren.push_back(indifferentChildren[i]);
+                //child closeness is not necessarily 0 if weighted childcloseness is 0
+                bestEdits -= traversalData[indifferentChildren[i]].childCloseness;
                 indifferentChildren[i] = indifferentChildren.back();
                 indifferentChildren.pop_back();
             }
@@ -444,6 +448,8 @@ void EditingRunner::localMove(node nodeToMove) {
                     if (randomBool(2)) {
                         for (node u : indifferentChildren) {
                             bestChildren.push_back(u);
+                            //child closeness is not necessarily 0 if weighted childcloseness is 0
+                            bestEdits -= traversalData[u].childCloseness;
                         }
                     }
                 } else {
@@ -460,6 +466,8 @@ void EditingRunner::localMove(node nodeToMove) {
 
                     for (node u : sample) {
                         bestChildren.push_back(u);
+                        //child closeness is not necessarily 0 if weighted childcloseness is 0
+                        bestEdits -= traversalData[u].childCloseness;
                     }
                 }
             } else if (bestChildren.size() > 1) {
@@ -468,6 +476,8 @@ void EditingRunner::localMove(node nodeToMove) {
                 for (node u : indifferentChildren) {
                     if (randomBool(2)) {
                         bestChildren.push_back(u);
+                        //child closeness is not necessarily 0 if weighted childcloseness is 0
+                        bestEdits -= traversalData[u].childCloseness;
                     }
                 }
             }
@@ -701,6 +711,8 @@ void EditingRunner::localMove(node nodeToMove) {
                 // INFO("root equally good");
             }
             if (coin) {
+                //correct scoremax incase root is equally good for weighted case
+                rootData.scoreMax = rootData.sumPositiveEdits;
                 rootData.bestParentBelow = none;
             }
             assert(rootData.hasChoices());
@@ -729,6 +741,8 @@ void EditingRunner::localMove(node nodeToMove) {
                     } else if (randomness && traversalData[u].childClosenessWeight == 0) {
                         //direclty insert into bestChildren based on coin toss
                         if (randomBool(2)) {
+                            //child closeness is not necessarily 0 if weighted childcloseness is 0
+                            bestEdits -= traversalData[u].childCloseness;
                             bestChildren.push_back(u);
                         }              
                     }
@@ -914,6 +928,8 @@ void EditingRunner::processNode(node u, node nodeToMove) {
             assert(traversalData[u].hasChoices());
         }
         if (coin) {
+            //update scoremax if scoremax weighted is identical to sumPositiveEditWeights, scoremax can be not identical to sumPositiveEdits
+            traversalData[u].scoreMax = sumPositiveEdits;
             traversalData[u].bestParentBelow = u;
         }
     }
@@ -963,6 +979,8 @@ void EditingRunner::processNode(node u, node nodeToMove) {
     } else if (randomness && traversalData[u].scoreMaxWeight == parentData.scoreMaxWeight) {
         parentData.addLogChoices(traversalData[u].logEqualBestChoices);
         if (logRandomBool(traversalData[u].logEqualBestChoices - parentData.logEqualBestChoices)) {
+            //update scoremax of parent if scoremaxWeight is equal and current node offers more choices
+            parentData.scoreMax = traversalData[u].scoreMax;
             parentData.bestParentBelow = traversalData[u].bestParentBelow;
         }
     }
@@ -1043,6 +1061,8 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
             assert(traversalData[u].hasChoices());
         }
         if (coin) {
+            //update scoremax if scoremax weighted is identical to sumPositiveEditWeights, scoremax can be not identical to sumPositiveEdits
+            traversalData[u].scoreMax = sumPositiveEdits;
             traversalData[u].bestParentBelow = u;
         }
     }
@@ -1092,6 +1112,8 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
     } else if (randomness && traversalData[u].scoreMaxWeight == parentData.scoreMaxWeight) {
         parentData.addLogChoices(traversalData[u].logEqualBestChoices);
         if (logRandomBool(traversalData[u].logEqualBestChoices - parentData.logEqualBestChoices)) {
+            //update scoremax of parent if scoremaxWeight is equal and current node offers more choices
+            parentData.scoreMax = traversalData[u].scoreMax;
             parentData.bestParentBelow = traversalData[u].bestParentBelow;
         }
     }
@@ -1303,7 +1325,8 @@ void EditingRunner::compareWithQuadratic(node nodeToMove) const {
     TRACE("Linear algorithm wants to have new parent ", rootData.bestParentBelow,
           " and new children ", bestChildren, " edits: ", childClosenessControl);
     //correct assertion? assert(minEdits >= childClosenessControl);
-    assert(minEdits <= childClosenessControl);
+    //assertion only correct for weighted childCLoseness
+    //assert(minEdits <= childClosenessControl);
 
     G.forNodes([&](node u) {
         tlx::unused(u);

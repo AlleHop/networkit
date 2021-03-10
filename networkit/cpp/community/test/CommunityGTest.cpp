@@ -952,6 +952,48 @@ TEST_F(CommunityGTest, testInclusionMinimalWeightedCost) {
   assert((edgeRemovals * removeEditCost) + (edgeInsertions * insertEditCost) == usedWeight);
 }
 
+TEST_F(CommunityGTest, testInclusionMinimalBioWeightedCost) {
+  Aux::Random::setSeed(0, false);
+  count removeEditCost = 1;
+  count insertEditCost = 2;
+  count minimum = 5;
+	Graph bio = METISGraphReader().read("../input/biological/graphs/bio-nr-1001-size-19.graph");
+  bio.indexEdges();
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(bio, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 400, true, true, false, 100UL, true, insertEditCost, removeEditCost);
+  mover.run();
+  Graph Q = mover.getQuasiThresholdGraph();
+  count used = mover.getNumberOfEdits();
+  count usedWeight = mover.getWeightOfEdits();
+  assert(used >= minimum);
+  
+  std::vector<std::pair<std::pair<node, node>, bool>> edits;
+  for(node u = 0; u < bio.upperNodeIdBound(); u++){
+    for(node v = u+1; v < bio.upperNodeIdBound(); v++){
+      if(Q.hasEdge(u,v) && !bio.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 1));
+      }
+      if(!Q.hasEdge(u,v) && bio.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 0));
+      }
+    }
+  }
+  
+  assert(edits.size() == used);
+   
+  count pow_set_size = pow(2, used-minimum);
+  INFO(used-minimum, " edits away from minimum");
+  INFO(used, "," , edits.size()," Number of Edits");
+  INFO(usedWeight, " Weight of Edits");
+
+  GraphDifference difference(bio, Q);
+  difference.run();
+  count edgeRemovals = difference.getNumberOfEdgeRemovals();
+  count edgeInsertions = difference.getNumberOfEdgeAdditions();
+  INFO(edgeRemovals," * ",removeEditCost, " Remove Edits");
+  INFO(edgeInsertions," * ",insertEditCost,  " Insert Edits");
+  assert((edgeRemovals * removeEditCost) + (edgeInsertions * insertEditCost) == usedWeight);
+}
+
 TEST_F(CommunityGTest, testWeightedCostMatrix) {
   Aux::Random::setSeed(37, false);
   std::vector<std::vector<int64_t>>  editCostMatrix;
