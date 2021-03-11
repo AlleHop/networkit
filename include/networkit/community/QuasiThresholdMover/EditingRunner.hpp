@@ -226,6 +226,7 @@ private:
     count numSubtreeMoves;
     count subtreeSize;
     std::vector<bool> inSubtree;
+    std::vector<node> subtreeNeighbors;
     std::vector<count> numNeighborsAll;
     std::vector<node> subtreeNodes;
     std::vector<node> parentCandidates;

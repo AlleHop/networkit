@@ -15,7 +15,8 @@ public:
     DynamicForest(const std::vector<node> &parents);
 
     void isolate(node u);
-    void moveUpNeighbor(node referenceNode, node Neighbor);
+    void moveUpNeighbor(node neighbor, node referenceNode);
+    node moveUpSubtreeNeighbor(node subtreeNeighbor, node subtreeReferenceNode);
     void moveToPosition(node u, node p, const std::vector<node> &adoptedChildren);
     void moveToAnyPosition(node u, const std::vector<node> &adoptedChildren);
     Graph toGraph() const;
@@ -162,13 +163,15 @@ private:
     class SimplePath {
     public:
         SimplePath()
-            : parent(none), posInParent(0), neighborCount(0), referenceNode(none), depth(0){};
+            : parent(none), posInParent(0), neighborCount(0), referenceNode(none), subtreeNeighborCount(0), subtreeReferenceNode(none), depth(0){};
         count length() const { return pathNodes.size(); };
         node upperEnd() const { return pathNodes.empty() ? none : pathNodes.back(); };
         node lowerEnd() const { return pathNodes.empty() ? none : pathNodes[0]; };
         void reset() {
             neighborCount = 0;
             referenceNode = none;
+            subtreeNeighborCount = 0;
+            subtreeReferenceNode = none;
             parent = none;
             posInParent = 0;
             depth = 0;
@@ -181,6 +184,8 @@ private:
         std::vector<node> pathNodes;
         count neighborCount;
         node referenceNode;
+        count subtreeNeighborCount;
+        node subtreeReferenceNode;
         count depth;
 
         std::string printPathInfo() const {

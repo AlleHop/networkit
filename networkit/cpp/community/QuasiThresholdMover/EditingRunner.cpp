@@ -554,6 +554,9 @@ void EditingRunner::localMove(node nodeToMove) {
 				if (!inSubtree[v]) {
 					++numNeighborsAll[v];
                     ++subtreeExtDegree;
+                    if(numNeighborsAll[v] == 1){
+                        subtreeNeighbors.push_back(v);
+                    }
                     if(editMatrixUsed){
                         editCostNeighbors += editCostNodeU[v];
                     }
@@ -630,6 +633,29 @@ void EditingRunner::localMove(node nodeToMove) {
             traversalData[p].childClosenessWeight -= sumChildClosenessWeight;
         });
 
+        //subtree sortPath
+        /*if (sortPaths) {
+            node nonSubtreeNeighbor;
+            int64_t tempChildCloseness;
+            int64_t tempChildClosenessWeight;
+            for (node v : subtreeNeighbors) {
+                tempChildCloseness = traversalData[v].childCloseness;
+                tempChildClosenessWeight = traversalData[v].childClosenessWeight;
+                nonSubtreeNeighbor = dynamicForest.moveUpSubtreeNeighbor(v, nodeToMove);
+                //check if one is a neighbor and one is not
+                if(!marker[v] != !marker[nonSubtreeNeighbor]){
+                    TRACE("Neighbor Status does differ! ", v, " " , nonSubtreeNeighbor);
+                    //fix childCloseness and sumPositiveEdits
+                    /*traversalData[v].childCloseness = traversalData[nonSubtreeNeighbor].childCloseness;
+                    traversalData[v].childClosenessWeight = traversalData[nonSubtreeNeighbor].childClosenessWeight;
+                    traversalData[nonSubtreeNeighbor].childCloseness = tempChildCloseness;
+                    traversalData[nonSubtreeNeighbor].childClosenessWeight = tempChildClosenessWeight;
+                }
+                else{
+                    TRACE("Neighbor Status does not differ! ", v, " " , nonSubtreeNeighbor);
+                }
+            }
+        }*/
         //add parent candidates to queue
         //TODO get rid of forNodes?
         G.forNodes([&](node v) {
@@ -802,6 +828,7 @@ void EditingRunner::localMove(node nodeToMove) {
     subtreeNodes.clear();
     //TODO Optimize: only reset necessary values
     if(moveSubtrees){
+        subtreeNeighbors.clear();
         std::fill(numNeighborsAll.begin(), numNeighborsAll.end(), 0);
     }
 

@@ -194,6 +194,34 @@ void DynamicForest::moveUpNeighbor(node neighbor, node referenceNode) {
     assert(pathsValid());
 }
 
+node DynamicForest::moveUpSubtreeNeighbor(node subtreeNeighbor, node subtreeReferenceNode) {
+    pid sp = path(subtreeNeighbor);
+    if (paths[sp].length() > 1) {
+        TRACE("Move up SubtreeNeighbor", subtreeNeighbor);
+        // update referenceNode if necessary
+        if (paths[sp].subtreeReferenceNode != subtreeReferenceNode) {
+            paths[sp].subtreeReferenceNode = subtreeReferenceNode;
+            paths[sp].subtreeNeighborCount = 0;
+        }
+        if (paths[sp].subtreeNeighborCount >= paths[sp].length())
+            return subtreeNeighbor; // already all subtreeNeighbors considered
+        index oldPos = path_pos[subtreeNeighbor];
+        index subtreeNeighborPos = paths[sp].length() - 1 - paths[sp].subtreeNeighborCount;
+        if (oldPos > subtreeNeighborPos)
+            return subtreeNeighbor; // subtreeNeighbor already considered
+        paths[sp].subtreeNeighborCount++;
+        if (oldPos == subtreeNeighborPos)
+            return subtreeNeighbor; // subtreeNeighbor was not considered but is at right position
+        node firstNonsubtreeNeighbor = paths[sp].pathNodes[subtreeNeighborPos];
+        std::swap(paths[sp].pathNodes[path_pos[firstNonsubtreeNeighbor]],
+                  paths[sp].pathNodes[path_pos[subtreeNeighbor]]);
+        std::swap(path_pos[firstNonsubtreeNeighbor], path_pos[subtreeNeighbor]);
+        return firstNonsubtreeNeighbor;
+    }
+    assert(pathsValid());
+    return subtreeNeighbor;
+}
+
 void DynamicForest::splitPath(pid sp, index splitPos) {
     if (paths[sp].length() <= 1 || splitPos == 0)
         return; // nothing to split
