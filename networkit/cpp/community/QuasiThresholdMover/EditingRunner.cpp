@@ -758,8 +758,7 @@ void EditingRunner::localMove(node nodeToMove) {
             (rootData.bestParentBelow == none) ? rootData : traversalData[rootData.bestParentBelow];
         // For subtree move adopting one child is okay, because we have at least two children because of subtree
         if (bestParentData.numCloseChildren > 0
-            || (randomness && bestParentData.numIndifferentChildren > 1)) {
-            std::vector<node> indifferentChildren;
+            || (randomness && bestParentData.numIndifferentChildren > 0)) {
             for (node u : touchedNodes) {
                 if (u != nodeToMove && dynamicForest.parent(u) == rootData.bestParentBelow && nodeTouched[u]) {
                     if (traversalData[u].childClosenessWeight > 0) {
