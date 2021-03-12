@@ -634,28 +634,86 @@ void EditingRunner::localMove(node nodeToMove) {
         });
 
         //subtree sortPath
-        /*if (sortPaths) {
+        TRACE(dynamicForest.printPaths());
+        if (sortPaths) {
             node nonSubtreeNeighbor;
-            int64_t tempChildCloseness;
-            int64_t tempChildClosenessWeight;
+            int64_t tempChildCloseness = 0;
+            int64_t tempChildClosenessWeight = 0;
+            int64_t difEdits = 0;
+            int64_t difEditCosts = 0;
+            count tempSumPositiveEdits = 0;
+            count tempSumPositiveEditsWeight = 0;
             for (node v : subtreeNeighbors) {
-                tempChildCloseness = traversalData[v].childCloseness;
-                tempChildClosenessWeight = traversalData[v].childClosenessWeight;
                 nonSubtreeNeighbor = dynamicForest.moveUpSubtreeNeighbor(v, nodeToMove);
-                //check if one is a neighbor and one is not
-                if(!marker[v] != !marker[nonSubtreeNeighbor]){
-                    TRACE("Neighbor Status does differ! ", v, " " , nonSubtreeNeighbor);
+                //check if nodes differ
+                if(v != nonSubtreeNeighbor){
+                    TRACE("nodes differ! ", v, " " , nonSubtreeNeighbor);
+                    tempSumPositiveEdits = traversalData[v].sumPositiveEdits;
+                    tempSumPositiveEditsWeight = traversalData[v].sumPositiveEditsWeight;
+                    tempChildCloseness = traversalData[nonSubtreeNeighbor].childCloseness;
+                    tempChildClosenessWeight = traversalData[nonSubtreeNeighbor].childClosenessWeight;
+                    difEdits += 2 * marker[nonSubtreeNeighbor] - 1;
+                    difEdits -= 2* marker[v] - 1;
+                    if(editMatrixUsed){
+                        //increase childCloseness if neighbor, decrease if not neighbor
+                        difEditCosts +=  editCostNodeToMove[nonSubtreeNeighbor];
+                        difEditCosts -=  editCostNodeToMove[v];
+                    }
+                    else{
+                        difEditCosts += marker[nonSubtreeNeighbor] * removeEditCost;
+                        difEditCosts -=
+                        1 * insertEditCost - marker[nonSubtreeNeighbor] * insertEditCost;
+                        difEditCosts -= marker[v] * removeEditCost;
+                        difEditCosts +=
+                        1 * insertEditCost - marker[v] * insertEditCost;
+                    }
                     //fix childCloseness and sumPositiveEdits
-                    /*traversalData[v].childCloseness = traversalData[nonSubtreeNeighbor].childCloseness;
-                    traversalData[v].childClosenessWeight = traversalData[nonSubtreeNeighbor].childClosenessWeight;
-                    traversalData[nonSubtreeNeighbor].childCloseness = tempChildCloseness;
-                    traversalData[nonSubtreeNeighbor].childClosenessWeight = tempChildClosenessWeight;
+                    traversalData[nonSubtreeNeighbor].childCloseness = traversalData[v].childCloseness;
+                    traversalData[nonSubtreeNeighbor].childClosenessWeight = traversalData[v].childClosenessWeight;
+                    traversalData[nonSubtreeNeighbor].childCloseness += difEdits;
+                    traversalData[nonSubtreeNeighbor].childClosenessWeight += difEditCosts;
+                    traversalData[v].childCloseness = tempChildCloseness;
+                    traversalData[v].childClosenessWeight = tempChildClosenessWeight;
+                    traversalData[nonSubtreeNeighbor].sumPositiveEdits = tempSumPositiveEdits;
+                    traversalData[nonSubtreeNeighbor].sumPositiveEditsWeight += tempSumPositiveEdits;
+                    node p = nonSubtreeNeighbor;
+                    node x;
+                    while (p != v){
+                        x = p;
+                        p = dynamicForest.parent(x);
+                        traversalData[p].childCloseness = traversalData[x].childCloseness;
+                        traversalData[p].childClosenessWeight = traversalData[x].childCloseness;
+                        if (marker[p]) { 
+                            ++traversalData[p].childCloseness;
+                        } else {
+                            --traversalData[p].childCloseness; 
+                        }
+                        if(editMatrixUsed){
+                          //increase childCloseness if neighbor, decrease if not neighbor
+                            traversalData[p].childClosenessWeight +=  editCostNodeToMove[p];
+                        }
+                        else{
+                            traversalData[p].childClosenessWeight += marker[p] * removeEditCost;
+                            traversalData[p].childClosenessWeight -=
+                            1 * insertEditCost - marker[p] * insertEditCost;
+                        }
+                        if(traversalData[x].childClosenessWeight >0){
+                            traversalData[p].sumPositiveEdits = traversalData[x].childCloseness;
+                            traversalData[p].sumPositiveEditsWeight = traversalData[x].childCloseness;
+                        } else{
+                            traversalData[p].sumPositiveEdits = 0;
+                            traversalData[p].sumPositiveEditsWeight = 0;
+                        }
+                    }
+                assert(traversalData[v].childCloseness == tempChildCloseness || tempChildCloseness == 0 && !nodeTouched[nonSubtreeNeighbor] || !nodeTouched[v]);
+                assert(traversalData[v].childClosenessWeight == tempChildClosenessWeight ||  !nodeTouched[nonSubtreeNeighbor] || !nodeTouched[v]);
                 }
                 else{
-                    TRACE("Neighbor Status does not differ! ", v, " " , nonSubtreeNeighbor);
+                    TRACE("nodes do not differ! ", v, " " , nonSubtreeNeighbor);
                 }
             }
-        }*/
+        }
+        TRACE(dynamicForest.printPaths());
         //add parent candidates to queue
         //TODO get rid of forNodes?
         G.forNodes([&](node v) {
