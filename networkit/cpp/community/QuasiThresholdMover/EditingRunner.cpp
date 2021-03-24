@@ -649,8 +649,8 @@ void EditingRunner::localMove(node nodeToMove) {
                 if(v != nonSubtreeNeighbor){
                     difEdits = 0;
                     difEditCosts = 0;
-                    traversalData[v].initializeForSubtree(generation);
-                    traversalData[nonSubtreeNeighbor].initializeForSubtree(generation);
+                    //traversalData[v].initializeForSubtree(generation);
+                    //traversalData[nonSubtreeNeighbor].initializeForSubtree(generation);
                     TRACE("nodes differ! ", v, " " , nonSubtreeNeighbor);
                     tempSumPositiveEdits = traversalData[v].sumPositiveEdits;
                     tempSumPositiveEditsWeight = traversalData[v].sumPositiveEditsWeight;
@@ -709,7 +709,7 @@ void EditingRunner::localMove(node nodeToMove) {
                             traversalData[p].sumPositiveEditsWeight = 0;
                         }
                     }
-                assert(traversalData[v].childCloseness == tempChildCloseness || tempChildCloseness < 0   || tempChildCloseness == 0 && !nodeTouched[nonSubtreeNeighbor] || !nodeTouched[v]);
+                assert(traversalData[v].childCloseness == tempChildCloseness || tempChildCloseness < 0   || !nodeTouched[nonSubtreeNeighbor] || !nodeTouched[v]);
                 assert(traversalData[v].childClosenessWeight == tempChildClosenessWeight || tempChildClosenessWeight <= 0 ||  !nodeTouched[nonSubtreeNeighbor] || !nodeTouched[v]);
                 }
                 else{
