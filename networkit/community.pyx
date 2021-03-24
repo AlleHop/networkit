@@ -1119,8 +1119,8 @@ cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>" nam
 cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>":
 
 	cdef cppclass _QuasiThresholdEditingLocalMover "NetworKit::QuasiThresholdMoving::QuasiThresholdEditingLocalMover"(_Algorithm):
-		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, bool_t moveSubtrees, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost) except +
-		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, bool_t moveSubtrees, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost, vector[vector[int64_t]] editCostMatrix) except +
+		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, bool_t moveSubtrees, bool_t subtreeSortPaths, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost) except +
+		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, bool_t moveSubtrees, bool_t subtreeSortPaths, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost, vector[vector[int64_t]] editCostMatrix) except +
 		count getNumberOfEdits() const
 		count getWeightOfEdits() const
 		count getUsedIterations() const
@@ -1142,12 +1142,12 @@ cdef class QuasiThresholdEditingLocalMover(Algorithm):
 	DescDegreeInsert = _Initialization.DESC_DEGREE_INSERT
 	UserDefindedInsert = _Initialization.USER_DEFINED_INSERT
 
-	def __cinit__(self, Graph G, _Initialization initialization = _Initialization.TRIVIAL, count maxIterations = 5, bool_t sortPaths = True, bool_t randomness = False, bool_t moveSubtrees = False, count maxPlateauSize = 4, bool_t useBucketQueue = True, count insertEditCost = 1, count removeEditCost = 1,  editCostMatrix = None ):
+	def __cinit__(self, Graph G, _Initialization initialization = _Initialization.TRIVIAL, count maxIterations = 5, bool_t sortPaths = True, bool_t randomness = False, bool_t moveSubtrees = False, bool_t subtreeSortPaths = False, count maxPlateauSize = 4, bool_t useBucketQueue = True, count insertEditCost = 1, count removeEditCost = 1,  editCostMatrix = None ):
 		self._G = G
 		if editCostMatrix is not None:
-			self._this = new _QuasiThresholdEditingLocalMover(G._this, initialization, maxIterations, sortPaths, randomness, moveSubtrees, maxPlateauSize, useBucketQueue, insertEditCost, removeEditCost, editCostMatrix)
+			self._this = new _QuasiThresholdEditingLocalMover(G._this, initialization, maxIterations, sortPaths, randomness, moveSubtrees, subtreeSortPaths, maxPlateauSize, useBucketQueue, insertEditCost, removeEditCost, editCostMatrix)
 		else:
-			self._this = new _QuasiThresholdEditingLocalMover(G._this, initialization, maxIterations, sortPaths, randomness, moveSubtrees, maxPlateauSize, useBucketQueue, insertEditCost, removeEditCost)
+			self._this = new _QuasiThresholdEditingLocalMover(G._this, initialization, maxIterations, sortPaths, randomness, moveSubtrees, subtreeSortPaths, maxPlateauSize, useBucketQueue, insertEditCost, removeEditCost)
 
 	def getNumberOfEdits(self):
 		return (<_QuasiThresholdEditingLocalMover *>(self._this)).getNumberOfEdits()

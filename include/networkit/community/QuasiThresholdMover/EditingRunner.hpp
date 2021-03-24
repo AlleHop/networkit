@@ -16,7 +16,7 @@ namespace QuasiThresholdMoving {
 class EditingRunner {
 public:
     EditingRunner(const Graph &G, QuasiThresholdEditingLocalMover::Initialization initialization,
-                  count maxIterations, bool sortPaths, bool randomness, bool moveSubtrees, count maxPlateauSize,
+                  count maxIterations, bool sortPaths, bool randomness, bool moveSubtrees, bool subtreeSortPaths, count maxPlateauSize,
                   bool useBucketQueue, std::vector<node> order,
                   count insertEditCost, count removeEditCost, std::vector<std::vector<int64_t>> editCostMatrix);
 
@@ -179,6 +179,7 @@ private:
     bool sortPaths;
     bool randomness;
     bool moveSubtrees;
+    bool subtreeSortPaths;
     std::vector<node> order;
     count maxPlateauSize;
 

@@ -12,11 +12,11 @@ namespace NetworKit {
 namespace QuasiThresholdMoving {
 EditingRunner::EditingRunner(const Graph &G,
                              QuasiThresholdEditingLocalMover::Initialization initialization,
-                             count maxIterations, bool sortPaths, bool randomness, bool moveSubtrees,
+                             count maxIterations, bool sortPaths, bool randomness, bool moveSubtrees, bool subtreeSortPaths,
                              count maxPlateauSize, bool useBucketQueue, std::vector<node> order,
                              count insertEditCost, count removeEditCost, std::vector<std::vector<int64_t>> editCostMatrix)
     : G(G), maxIterations(maxIterations), usedIterations(0), sortPaths(sortPaths),
-      randomness(randomness), moveSubtrees(moveSubtrees), maxPlateauSize(maxPlateauSize),
+      randomness(randomness), moveSubtrees(moveSubtrees), subtreeSortPaths(subtreeSortPaths), maxPlateauSize(maxPlateauSize),
       insertRun(initialization != QuasiThresholdEditingLocalMover::TRIVIAL
                 && initialization != QuasiThresholdEditingLocalMover::EDITING),
       useBucketQueue(useBucketQueue
@@ -635,7 +635,7 @@ void EditingRunner::localMove(node nodeToMove) {
 
         //subtree sortPath
         TRACE(dynamicForest.printPaths());
-        if (sortPaths) {
+        if (subtreeSortPaths) {
             node nonSubtreeNeighbor;
             int64_t tempChildCloseness = 0;
             int64_t tempChildClosenessWeight = 0;
@@ -647,6 +647,10 @@ void EditingRunner::localMove(node nodeToMove) {
                 nonSubtreeNeighbor = dynamicForest.moveUpSubtreeNeighbor(v, nodeToMove);
                 //check if nodes differ
                 if(v != nonSubtreeNeighbor){
+                    difEdits = 0;
+                    difEditCosts = 0;
+                    traversalData[v].initializeForSubtree(generation);
+                    traversalData[nonSubtreeNeighbor].initializeForSubtree(generation);
                     TRACE("nodes differ! ", v, " " , nonSubtreeNeighbor);
                     tempSumPositiveEdits = traversalData[v].sumPositiveEdits;
                     tempSumPositiveEditsWeight = traversalData[v].sumPositiveEditsWeight;
@@ -675,14 +679,14 @@ void EditingRunner::localMove(node nodeToMove) {
                     traversalData[v].childCloseness = tempChildCloseness;
                     traversalData[v].childClosenessWeight = tempChildClosenessWeight;
                     traversalData[nonSubtreeNeighbor].sumPositiveEdits = tempSumPositiveEdits;
-                    traversalData[nonSubtreeNeighbor].sumPositiveEditsWeight += tempSumPositiveEdits;
+                    traversalData[nonSubtreeNeighbor].sumPositiveEditsWeight = tempSumPositiveEditsWeight;
                     node p = nonSubtreeNeighbor;
                     node x;
                     while (p != v){
                         x = p;
                         p = dynamicForest.parent(x);
                         traversalData[p].childCloseness = traversalData[x].childCloseness;
-                        traversalData[p].childClosenessWeight = traversalData[x].childCloseness;
+                        traversalData[p].childClosenessWeight = traversalData[x].childClosenessWeight;
                         if (marker[p]) { 
                             ++traversalData[p].childCloseness;
                         } else {
@@ -699,14 +703,14 @@ void EditingRunner::localMove(node nodeToMove) {
                         }
                         if(traversalData[x].childClosenessWeight >0){
                             traversalData[p].sumPositiveEdits = traversalData[x].childCloseness;
-                            traversalData[p].sumPositiveEditsWeight = traversalData[x].childCloseness;
+                            traversalData[p].sumPositiveEditsWeight = traversalData[x].childClosenessWeight;
                         } else{
                             traversalData[p].sumPositiveEdits = 0;
                             traversalData[p].sumPositiveEditsWeight = 0;
                         }
                     }
-                assert(traversalData[v].childCloseness == tempChildCloseness || tempChildCloseness == 0 && !nodeTouched[nonSubtreeNeighbor] || !nodeTouched[v]);
-                assert(traversalData[v].childClosenessWeight == tempChildClosenessWeight ||  !nodeTouched[nonSubtreeNeighbor] || !nodeTouched[v]);
+                assert(traversalData[v].childCloseness == tempChildCloseness || tempChildCloseness < 0   || tempChildCloseness == 0 && !nodeTouched[nonSubtreeNeighbor] || !nodeTouched[v]);
+                assert(traversalData[v].childClosenessWeight == tempChildClosenessWeight || tempChildClosenessWeight <= 0 ||  !nodeTouched[nonSubtreeNeighbor] || !nodeTouched[v]);
                 }
                 else{
                     TRACE("nodes do not differ! ", v, " " , nonSubtreeNeighbor);
@@ -935,7 +939,7 @@ void EditingRunner::processNode(node u, node nodeToMove) {
 
     TRACE("Edit difference before descending: ", traversalData[u].childCloseness, ", ", traversalData[u].childClosenessWeight);
 
-    assert(!marker[u] || traversalData[u].childClosenessWeight > 0);
+    assert(!marker[u] || traversalData[u].childClosenessWeight > 0 || (editMatrixUsed && editCostNodeToMove[u]== 0));
 
     if (traversalData[u].childClosenessWeight >= 0) {
         assert(lastVisitedDFSNode[u] == u);
