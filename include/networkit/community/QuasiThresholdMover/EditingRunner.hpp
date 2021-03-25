@@ -262,6 +262,7 @@ private:
     void processNode(node u, node nodeToMove);
     void processNodeForSubtree(node u, node nodeToMove);
     Graph getGraphFromEditMatrix();
+    std::vector<node> getParentsForTree();
     void compareWithQuadratic(node nodeToMove) const;
     count countNumberOfEdits() const;
     count countWeightOfEdits() const;

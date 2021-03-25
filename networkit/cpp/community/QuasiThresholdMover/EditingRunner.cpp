@@ -18,7 +18,8 @@ EditingRunner::EditingRunner(const Graph &G,
     : G(G), maxIterations(maxIterations), usedIterations(0), sortPaths(sortPaths),
       randomness(randomness), moveSubtrees(moveSubtrees), subtreeSortPaths(subtreeSortPaths), maxPlateauSize(maxPlateauSize),
       insertRun(initialization != QuasiThresholdEditingLocalMover::TRIVIAL
-                && initialization != QuasiThresholdEditingLocalMover::EDITING),
+                && initialization != QuasiThresholdEditingLocalMover::EDITING
+                && initialization != QuasiThresholdEditingLocalMover::RANDOM_TREE),
       useBucketQueue(useBucketQueue
       && !(editCostMatrix.size() != 0 && editCostMatrix.size() == G.upperNodeIdBound()) 
       && (insertEditCost == 1 && removeEditCost ==1)), 
@@ -80,6 +81,16 @@ EditingRunner::EditingRunner(const Graph &G,
         this->order.reserve(G.numberOfNodes());
         dynamicForest = DynamicForest(std::vector<node>(G.upperNodeIdBound(), none));
         G.forNodesInRandomOrder([&](node u) { this->order.push_back(u); });
+        break;
+    }
+    case QuasiThresholdEditingLocalMover::RANDOM_TREE: {
+        std::vector<node> parents;
+        parents = getParentsForTree();
+        if (G.upperNodeIdBound() == G.numberOfNodes()) {
+            dynamicForest = DynamicForest(parents);
+        } else {
+            dynamicForest = DynamicForest(G, parents);
+        }
         break;
     }
     case QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT: {
@@ -1559,6 +1570,22 @@ Graph EditingRunner::getGraphFromEditMatrix() {
         }
     }
     return editGraph;
+}
+
+std::vector<node> EditingRunner::getParentsForTree() {
+    std::vector<node> parents = std::vector<node>(G.upperNodeIdBound(), none);
+    std::vector<bool> nodeHandled = std::vector<bool>(G.upperNodeIdBound(), 0);
+    G.forNodesInRandomOrder([&](node u) { order.push_back(u); });
+        for (index j = 0; j < G.numberOfNodes(); j++) {
+                node u = order[j];
+                G.forEdgesOf(u, [&](node v) {
+                    if(nodeHandled[v]){
+                        parents[u] = v;
+                    }
+                });        
+                nodeHandled[u] = 1;
+        }
+    return parents;
 }
 } // namespace QuasiThresholdMoving
 

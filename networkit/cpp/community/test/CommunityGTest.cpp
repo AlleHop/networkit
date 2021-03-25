@@ -1303,6 +1303,48 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrixSubtreeMove) {
   INFO(edgeInsertions,  " Insert Edits");
 }
 
+TEST_F(CommunityGTest, testRandomTreeWeightedCost) {
+  Aux::Random::setSeed(0, false);
+  count removeEditCost = 5;
+  count insertEditCost = 2;
+  count minimum = 21;
+	Graph karate = METISGraphReader().read("input/karate.graph");
+  karate.indexEdges();
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(karate, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 20, true, true, false, false, 4UL, true, insertEditCost, removeEditCost);
+  mover.run();
+  Graph Q = mover.getQuasiThresholdGraph();
+  count used = mover.getNumberOfEdits();
+  count usedWeight = mover.getWeightOfEdits();
+  assert(used >= minimum);
+  
+  std::vector<std::pair<std::pair<node, node>, bool>> edits;
+  for(node u = 0; u < karate.upperNodeIdBound(); u++){
+    for(node v = u+1; v < karate.upperNodeIdBound(); v++){
+      if(Q.hasEdge(u,v) && !karate.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 1));
+      }
+      if(!Q.hasEdge(u,v) && karate.hasEdge(u,v)){
+        edits.push_back(std::make_pair(std::make_pair(u,v), 0));
+      }
+    }
+  }
+  
+  assert(edits.size() == used);
+   
+  count pow_set_size = pow(2, used-minimum);
+  INFO(used-minimum, " edits away from minimum");
+  INFO(used, "," , edits.size()," Number of Edits");
+  INFO(usedWeight, " Weight of Edits");
+
+  GraphDifference difference(karate, Q);
+  difference.run();
+  count edgeRemovals = difference.getNumberOfEdgeRemovals();
+  count edgeInsertions = difference.getNumberOfEdgeAdditions();
+  INFO(edgeRemovals," * ",removeEditCost, " Remove Edits");
+  INFO(edgeInsertions," * ",insertEditCost,  " Insert Edits");
+  assert((edgeRemovals * removeEditCost) + (edgeInsertions * insertEditCost) == usedWeight);
+}
+
 TEST_F(CommunityGTest, testRandomness) {
   /*  o - x - o
      | 

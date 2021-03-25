@@ -1114,7 +1114,8 @@ cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>" nam
 		RANDOM_INSERT,
 		ASC_DEGREE_INSERT,
 		DESC_DEGREE_INSERT,
-		USER_DEFINED_INSERT
+		USER_DEFINED_INSERT,
+		RANDOM_TREE
 
 cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>":
 
@@ -1141,6 +1142,7 @@ cdef class QuasiThresholdEditingLocalMover(Algorithm):
 	AscDegreeInsert = _Initialization.ASC_DEGREE_INSERT
 	DescDegreeInsert = _Initialization.DESC_DEGREE_INSERT
 	UserDefindedInsert = _Initialization.USER_DEFINED_INSERT
+	RandomTree = _Initialization.RANDOM_TREE
 
 	def __cinit__(self, Graph G, _Initialization initialization = _Initialization.TRIVIAL, count maxIterations = 5, bool_t sortPaths = True, bool_t randomness = False, bool_t moveSubtrees = False, bool_t subtreeSortPaths = False, count maxPlateauSize = 4, bool_t useBucketQueue = True, count insertEditCost = 1, count removeEditCost = 1,  editCostMatrix = None ):
 		self._G = G
