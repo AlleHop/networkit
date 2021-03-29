@@ -84,35 +84,6 @@ private:
             }
         };
 
-        void initializeForSubtree(count currentGeneration) {
-            //keep childCloseness for Subtree Move
-            if (currentGeneration == generation +1 ) {
-                generation = currentGeneration;
-                scoreMax = 0;
-                scoreMaxWeight = 0;
-                subtreeEdits = 0;
-                subtreeEditCosts = 0;
-                bestParentBelow = none;
-                logEqualBestChoices = -std::numeric_limits<double>::infinity();
-                numIndifferentChildren = 0;
-                numCloseChildren = 0;
-            } else if (currentGeneration != generation) {
-                generation = currentGeneration;
-                scoreMax = 0;
-                childCloseness = 0;
-                scoreMaxWeight = 0;
-                childClosenessWeight = 0;
-                sumPositiveEdits = 0;
-                sumPositiveEditsWeight = 0;
-                subtreeEdits = 0;
-                subtreeEditCosts = 0;
-                bestParentBelow = none;
-                logEqualBestChoices = -std::numeric_limits<double>::infinity();
-                numIndifferentChildren = 0;
-                numCloseChildren = 0;
-            }
-        };
-
         bool hasChoices() { return logEqualBestChoices > -std::numeric_limits<double>::infinity(); }
 
         void addEqualChoices(count choices) { addLogChoices(std::log(choices)); }
@@ -233,10 +204,7 @@ private:
     std::vector<node> parentCandidates;
     std::vector<node> parentQueue;
     std::vector<int64_t> editCostSubtree;
-    std::vector<bool> nodeTouchedSubtree;
     count subtreeExtDegree = 0;
-    count curSubtreeEditCost = 0;
-    count curSubtreeEdits = 0;
 
     std::vector<bool> existing;
 

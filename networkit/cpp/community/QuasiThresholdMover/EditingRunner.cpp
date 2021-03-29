@@ -25,7 +25,7 @@ EditingRunner::EditingRunner(const Graph &G,
       && (insertEditCost == 1 && removeEditCost ==1)), 
       insertEditCost(insertEditCost), removeEditCost(removeEditCost), editCostMatrix(editCostMatrix), handler(), hasMoved(true),
       marker(G.upperNodeIdBound(), false), inSubtree(G.upperNodeIdBound(), false),  numNeighborsAll(G.upperNodeIdBound(), 0),lastVisitedDFSNode(G.upperNodeIdBound(), none),
-      traversalData(G.upperNodeIdBound()), nodeTouched(G.upperNodeIdBound(), false), nodeTouchedSubtree(G.upperNodeIdBound(), false), rootData(),
+      traversalData(G.upperNodeIdBound()), nodeTouched(G.upperNodeIdBound(), false), rootData(),
       existing(G.upperNodeIdBound(), !insertRun), rootEqualBestParentsCpy(0), currentPlateau(0),
       actualMaximumPlateau(0), gen(Aux::Random::getURNG()), realDist(), intDist(0, 1) {
 
@@ -375,21 +375,21 @@ void EditingRunner::localMove(node nodeToMove) {
     rootData.sumPositiveEdits = rootData.childCloseness;
     rootData.sumPositiveEditsWeight = rootData.childClosenessWeight;
     if (!randomness) {
-        if (rootData.childClosenessWeight > rootData.scoreMaxWeight) {
+        if (rootData.sumPositiveEditsWeight > rootData.scoreMaxWeight) {
             rootData.bestParentBelow = none;
-            rootData.scoreMax = rootData.childCloseness;
-            rootData.scoreMaxWeight = rootData.childClosenessWeight;
+            rootData.scoreMax = rootData.sumPositiveEdits;
+            rootData.scoreMaxWeight = rootData.sumPositiveEditsWeight;
         }
     } else {
         bool coin = false;
         double ownWeight = rootData.numIndifferentChildren * std::log(2);
-        if (rootData.childClosenessWeight > rootData.scoreMaxWeight || !rootData.hasChoices()) {
+        if (rootData.sumPositiveEditsWeight > rootData.scoreMaxWeight || !rootData.hasChoices()) {
             // INFO("root better");
-            rootData.scoreMax = rootData.childCloseness;
-            rootData.scoreMaxWeight = rootData.childClosenessWeight;
+            rootData.scoreMax = rootData.sumPositiveEdits;
+            rootData.scoreMaxWeight = rootData.sumPositiveEditsWeight;
             rootData.logEqualBestChoices = ownWeight;
             coin = true;
-        } else if (rootData.childClosenessWeight == rootData.scoreMaxWeight) {
+        } else if (rootData.sumPositiveEditsWeight == rootData.scoreMaxWeight) {
             ownWeight = rootData.calculateOwnWeightForEqualChoices();
             if (ownWeight > -std::numeric_limits<double>::infinity()) {
                 rootData.addLogChoices(ownWeight);
@@ -399,7 +399,7 @@ void EditingRunner::localMove(node nodeToMove) {
         }
         if (coin) {
             //correct scoremax incase root is equally good for weighted case
-            rootData.scoreMax = rootData.childCloseness;
+            rootData.scoreMax = rootData.sumPositiveEdits;
             rootData.bestParentBelow = none;
         }
 
@@ -531,6 +531,12 @@ void EditingRunner::localMove(node nodeToMove) {
 #endif
     }
 
+    for (node u : touchedNodes) {
+        lastVisitedDFSNode[u] = u;
+        nodeTouched[u] = false;
+    }
+    touchedNodes.clear();
+
     if(moveSubtrees){
         subtreeSize = 0;
         //calculate subtree size and nodes in subtree
@@ -540,7 +546,6 @@ void EditingRunner::localMove(node nodeToMove) {
             subtreeNodes.push_back(c);
 		}, [](node) {});
         TRACE("Subtreesize:", subtreeSize);
-
     }
 
     //subtreeMove when subtree is more than one node
@@ -610,122 +615,14 @@ void EditingRunner::localMove(node nodeToMove) {
         }
 
         //correct child closenesee above subtree
-        int64_t sumChildCloseness = 0;
-        int64_t sumChildClosenessWeight = 0;
-        for( node c : curChildren){
-            sumChildCloseness += traversalData[c].childCloseness;
-            sumChildClosenessWeight += traversalData[c].childClosenessWeight;
-            assert(dynamicForest.parent(c)== nodeToMove);
-        }
-        //sum childCloseness has to be positive because only then we adopt children
-        assert(sumChildClosenessWeight >= 0);
-
-        node parentOfAncestor;
-        if(curParent== none){
-            rootData.sumPositiveEdits -= sumChildCloseness;
-            rootData.sumPositiveEditsWeight -= sumChildClosenessWeight;
-        } else {
-            traversalData[curParent].sumPositiveEdits -= sumChildCloseness;
-            traversalData[curParent].sumPositiveEditsWeight -= sumChildClosenessWeight;
-        }
-        dynamicForest.forAncestors(nodeToMove, [&](node p) {
-            //when childcloseness positive, change sumPosEdits of Parent
-            if(traversalData[p].childClosenessWeight >= 0){
-                parentOfAncestor = dynamicForest.parent(p);
-                if(parentOfAncestor == none){
-                    rootData.sumPositiveEdits -= traversalData[p].childCloseness;
-                    rootData.sumPositiveEditsWeight -= traversalData[p].childClosenessWeight;
-                } else {
-                    traversalData[parentOfAncestor].sumPositiveEdits -= traversalData[p].childCloseness;
-                    traversalData[parentOfAncestor].sumPositiveEditsWeight -= traversalData[p].childClosenessWeight;
-                }
-            }  
-            traversalData[p].childCloseness -= sumChildCloseness;
-            traversalData[p].childClosenessWeight -= sumChildClosenessWeight;
-        });
 
         //subtree sortPath
         TRACE(dynamicForest.printPaths());
         if (subtreeSortPaths) {
             node nonSubtreeNeighbor;
-            int64_t tempChildCloseness = 0;
-            int64_t tempChildClosenessWeight = 0;
-            int64_t difEdits = 0;
-            int64_t difEditCosts = 0;
-            count tempSumPositiveEdits = 0;
-            count tempSumPositiveEditsWeight = 0;
             for (node v : subtreeNeighbors) {
                 nonSubtreeNeighbor = dynamicForest.moveUpSubtreeNeighbor(v, nodeToMove);
                 //check if nodes differ
-                if(v != nonSubtreeNeighbor){
-                    difEdits = 0;
-                    difEditCosts = 0;
-                    //traversalData[v].initializeForSubtree(generation);
-                    //traversalData[nonSubtreeNeighbor].initializeForSubtree(generation);
-                    TRACE("nodes differ! ", v, " " , nonSubtreeNeighbor);
-                    tempSumPositiveEdits = traversalData[v].sumPositiveEdits;
-                    tempSumPositiveEditsWeight = traversalData[v].sumPositiveEditsWeight;
-                    tempChildCloseness = traversalData[nonSubtreeNeighbor].childCloseness;
-                    tempChildClosenessWeight = traversalData[nonSubtreeNeighbor].childClosenessWeight;
-                    difEdits += 2 * marker[nonSubtreeNeighbor] - 1;
-                    difEdits -= 2* marker[v] - 1;
-                    if(editMatrixUsed){
-                        //increase childCloseness if neighbor, decrease if not neighbor
-                        difEditCosts +=  editCostNodeToMove[nonSubtreeNeighbor];
-                        difEditCosts -=  editCostNodeToMove[v];
-                    }
-                    else{
-                        difEditCosts += marker[nonSubtreeNeighbor] * removeEditCost;
-                        difEditCosts -=
-                        1 * insertEditCost - marker[nonSubtreeNeighbor] * insertEditCost;
-                        difEditCosts -= marker[v] * removeEditCost;
-                        difEditCosts +=
-                        1 * insertEditCost - marker[v] * insertEditCost;
-                    }
-                    //fix childCloseness and sumPositiveEdits
-                    traversalData[nonSubtreeNeighbor].childCloseness = traversalData[v].childCloseness;
-                    traversalData[nonSubtreeNeighbor].childClosenessWeight = traversalData[v].childClosenessWeight;
-                    traversalData[nonSubtreeNeighbor].childCloseness += difEdits;
-                    traversalData[nonSubtreeNeighbor].childClosenessWeight += difEditCosts;
-                    traversalData[v].childCloseness = tempChildCloseness;
-                    traversalData[v].childClosenessWeight = tempChildClosenessWeight;
-                    traversalData[nonSubtreeNeighbor].sumPositiveEdits = tempSumPositiveEdits;
-                    traversalData[nonSubtreeNeighbor].sumPositiveEditsWeight = tempSumPositiveEditsWeight;
-                    node p = nonSubtreeNeighbor;
-                    node x;
-                    while (p != v){
-                        x = p;
-                        p = dynamicForest.parent(x);
-                        traversalData[p].childCloseness = traversalData[x].childCloseness;
-                        traversalData[p].childClosenessWeight = traversalData[x].childClosenessWeight;
-                        if (marker[p]) { 
-                            ++traversalData[p].childCloseness;
-                        } else {
-                            --traversalData[p].childCloseness; 
-                        }
-                        if(editMatrixUsed){
-                          //increase childCloseness if neighbor, decrease if not neighbor
-                            traversalData[p].childClosenessWeight +=  editCostNodeToMove[p];
-                        }
-                        else{
-                            traversalData[p].childClosenessWeight += marker[p] * removeEditCost;
-                            traversalData[p].childClosenessWeight -=
-                            1 * insertEditCost - marker[p] * insertEditCost;
-                        }
-                        if(traversalData[x].childClosenessWeight >0){
-                            traversalData[p].sumPositiveEdits = traversalData[x].childCloseness;
-                            traversalData[p].sumPositiveEditsWeight = traversalData[x].childClosenessWeight;
-                        } else{
-                            traversalData[p].sumPositiveEdits = 0;
-                            traversalData[p].sumPositiveEditsWeight = 0;
-                        }
-                    }
-                assert(traversalData[v].childCloseness == tempChildCloseness || tempChildCloseness < 0   || !nodeTouched[nonSubtreeNeighbor] || !nodeTouched[v]);
-                assert(traversalData[v].childClosenessWeight == tempChildClosenessWeight || tempChildClosenessWeight <= 0 ||  !nodeTouched[nonSubtreeNeighbor] || !nodeTouched[v]);
-                }
-                else{
-                    TRACE("nodes do not differ! ", v, " " , nonSubtreeNeighbor);
-                }
             }
         }
         TRACE(dynamicForest.printPaths());
@@ -733,9 +630,10 @@ void EditingRunner::localMove(node nodeToMove) {
         //TODO get rid of forNodes?
         G.forNodes([&](node v) {
             if(!inSubtree[v]) {
-                //fill queue with candidates with positive editCost or positive childcloseness
-                if ((traversalData[v].childClosenessWeight > 0 && nodeTouched[v] ) ||
-                    (!editMatrixUsed && (((numNeighborsAll[v] * removeEditCost) + ((numNeighborsAll[v] - subtreeSize) * insertEditCost)) >= 0)) ||
+                int64_t testEditCost = ((numNeighborsAll[v] * removeEditCost) + ((numNeighborsAll[v] - subtreeSize) * insertEditCost));
+                //fill queue with candidates with positive editCost or neighbors of nodetomove
+                if ( marker[v] || 
+                    (!editMatrixUsed && (testEditCost >= 0)) ||
                     (editMatrixUsed && editCostSubtree[v] >= 0)) {
                     parentCandidates.push_back(v);
                 }
@@ -755,7 +653,7 @@ void EditingRunner::localMove(node nodeToMove) {
         }
 
         bestChildren.clear();
-        rootData.initializeForSubtree(generation);
+        rootData.initialize(generation);
 
         if (useBucketQueue) {
             while (!bucketQueue.empty()) {
@@ -778,7 +676,7 @@ void EditingRunner::localMove(node nodeToMove) {
                     node u = parentQueue.back();
                     parentQueue.pop_back();
                     assert(dynamicForest.depth(u) == level);
-                    if (nodeTouchedSubtree[u])
+                    if (nodeTouched[u])
                         continue; // if the node was touched in the previous level, it was in
                               // currentLevel and thus has already been processed
                     processNodeForSubtree(u, nodeToMove);
@@ -789,6 +687,9 @@ void EditingRunner::localMove(node nodeToMove) {
             }
         }
 
+            //save sum positive editWeights for root
+        rootData.sumPositiveEdits = rootData.childCloseness;
+        rootData.sumPositiveEditsWeight = rootData.childClosenessWeight;
         if (!randomness) {
             if (rootData.sumPositiveEditsWeight > rootData.scoreMaxWeight) {
                 rootData.bestParentBelow = none;
@@ -886,7 +787,6 @@ void EditingRunner::localMove(node nodeToMove) {
     for (node u : touchedNodes) {
         lastVisitedDFSNode[u] = u;
         nodeTouched[u] = false;
-        nodeTouchedSubtree[u] = false;
     }
     for (node v : neighbors) {
         marker[v] = false;
@@ -926,8 +826,6 @@ void EditingRunner::processNode(node u, node nodeToMove) {
     traversalData[u].initialize(generation);
 
     //save sum of positive edits for subtreemove
-    int64_t sumPositiveEdits = traversalData[u].childCloseness;
-    int64_t sumPositiveEditsWeight = traversalData[u].childClosenessWeight;
     traversalData[u].sumPositiveEdits = traversalData[u].childCloseness;
     traversalData[u].sumPositiveEditsWeight = traversalData[u].childClosenessWeight;
     assert(traversalData[u].childClosenessWeight >= 0);
@@ -1002,23 +900,23 @@ void EditingRunner::processNode(node u, node nodeToMove) {
     TRACE("Edit difference after descending: ", traversalData[u].childCloseness, ", ", traversalData[u].childClosenessWeight);
 
     if (!randomness) {
-        if (sumPositiveEditsWeight > traversalData[u].scoreMaxWeight || traversalData[u].scoreMaxWeight == 0) {
-            traversalData[u].scoreMax = sumPositiveEdits;
-            traversalData[u].scoreMaxWeight = sumPositiveEditsWeight;
+        if (traversalData[u].sumPositiveEditsWeight > traversalData[u].scoreMaxWeight || traversalData[u].scoreMaxWeight == 0) {
+            traversalData[u].scoreMax = traversalData[u].sumPositiveEdits;
+            traversalData[u].scoreMaxWeight = traversalData[u].sumPositiveEditsWeight;
             traversalData[u].bestParentBelow = u;
         }
     } else {
         bool coin = false;
         double ownWeight = traversalData[u].numIndifferentChildren * std::log(2);
-        if (sumPositiveEditsWeight > traversalData[u].scoreMaxWeight || !traversalData[u].hasChoices()) {
-            traversalData[u].scoreMax = sumPositiveEdits;
-            traversalData[u].scoreMaxWeight = sumPositiveEditsWeight;
+        if (traversalData[u].sumPositiveEditsWeight > traversalData[u].scoreMaxWeight || !traversalData[u].hasChoices()) {
+            traversalData[u].scoreMax = traversalData[u].sumPositiveEdits;
+            traversalData[u].scoreMaxWeight = traversalData[u].sumPositiveEditsWeight;
             traversalData[u].logEqualBestChoices = ownWeight;
             // Either we do not adopt children, or we are at the lower end of a path.
             // Otherwise, there must be a node below u that is at least as good.
-            assert(!sortPaths || sumPositiveEdits == 0 || dynamicForest.isLowerEnd(u));
+            assert(!sortPaths || traversalData[u].sumPositiveEdits == 0 || dynamicForest.isLowerEnd(u));
             coin = true;
-        } else if (sumPositiveEditsWeight == traversalData[u].scoreMaxWeight) {
+        } else if (traversalData[u].sumPositiveEditsWeight == traversalData[u].scoreMaxWeight) {
             ownWeight = traversalData[u].calculateOwnWeightForEqualChoices();
             if (ownWeight > -std::numeric_limits<double>::infinity()) {
                 traversalData[u].addLogChoices(ownWeight);
@@ -1027,8 +925,8 @@ void EditingRunner::processNode(node u, node nodeToMove) {
             assert(traversalData[u].hasChoices());
         }
         if (coin) {
-            //update scoremax if scoremax weighted is identical to sumPositiveEditWeights, scoremax can be not identical to sumPositiveEdits
-            traversalData[u].scoreMax = sumPositiveEdits;
+            //update scoremax if scoremax weighted is identical to sumPositiveEditWeights, scoremax can be not identical to traversalData[u].sumPositiveEdits
+            traversalData[u].scoreMax = traversalData[u].sumPositiveEdits;
             traversalData[u].bestParentBelow = u;
         }
     }
@@ -1106,21 +1004,19 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
     TRACE("Parent: ", dynamicForest.parent(u), ", children: ", dynamicForest.children(u));
     assert(u != nodeToMove);
     tlx::unused(nodeToMove);
-    if (useBucketQueue && nodeTouchedSubtree[u]) {
+    if (useBucketQueue) {
         assert(dynamicForest.depth(u) <= maxDepth);
     }
-    if (!nodeTouchedSubtree[u]) {
-        nodeTouchedSubtree[u] = true;
-        if(!nodeTouched[u]){
-            touchedNodes.emplace_back(u);
-        }
-        assert( (traversalData[u].childClosenessWeight > 0 && nodeTouched[u]) || 
+    if (!nodeTouched[u]) {
+        nodeTouched[u] = true;
+        touchedNodes.emplace_back(u);
+        assert(marker[u] || 
         (editMatrixUsed && editCostSubtree[u] >= 0) || 
         (!editMatrixUsed && (((numNeighborsAll[u] * removeEditCost) + ((numNeighborsAll[u] - subtreeSize) * insertEditCost)) >= 0))); 
         // only node with editCosts >= 0 are not touched and are processed
     }
 
-    traversalData[u].initializeForSubtree(generation);
+    traversalData[u].initialize(generation);
 
     //required edits to this node for subtree
     traversalData[u].subtreeEdits = (2 * numNeighborsAll[u] - subtreeSize);
@@ -1131,29 +1027,98 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
     }
 
     //sum of Positive childCloseness below node
-    int64_t sumPositiveEdits = traversalData[u].sumPositiveEdits;
-    int64_t sumPositiveEditsWeight = traversalData[u].sumPositiveEditsWeight;
-    assert(sumPositiveEditsWeight >=0);
+    traversalData[u].sumPositiveEdits = traversalData[u].childCloseness;
+    traversalData[u].sumPositiveEditsWeight = traversalData[u].childClosenessWeight;
+    assert(traversalData[u].sumPositiveEditsWeight >=0);
+
+    if (marker[u]) { 
+        ++traversalData[u].childCloseness;
+    } else {
+        --traversalData[u].childCloseness; 
+    }
+    if(editMatrixUsed){
+        //increase childCloseness if neighbor, decrease if not neighbor
+        traversalData[u].childClosenessWeight +=  editCostNodeToMove[u];
+    }
+    else{
+        traversalData[u].childClosenessWeight += marker[u] * removeEditCost;
+        traversalData[u].childClosenessWeight -=
+        1 * insertEditCost - marker[u] * insertEditCost;
+    }
+
+
+    TRACE("Edit difference before descending: ", traversalData[u].childCloseness, ", ", traversalData[u].childClosenessWeight);
+
+    assert(!marker[u] || traversalData[u].childClosenessWeight > 0 || (editMatrixUsed && editCostNodeToMove[u]== 0));
+
+    if (traversalData[u].childClosenessWeight >= 0) {
+        assert(lastVisitedDFSNode[u] == u);
+
+        node c = dynamicForest.nextDFSNodeOnEnter(u, u);
+
+        while (c != u) {
+            //resturcture if 
+            if ((!nodeTouched[c] || traversalData[c].childClosenessWeight < 0) && c != nodeToMove) {
+                if (nodeTouched[c] ){
+                    assert(traversalData[c].childClosenessWeight < 0);
+                    traversalData[u].childClosenessWeight += traversalData[c].childClosenessWeight;
+                    traversalData[u].childCloseness+= traversalData[c].childCloseness;
+                    // advance to the next starting point for the DFS search.
+                    c = lastVisitedDFSNode[c];
+                }
+                else{
+                    if(editMatrixUsed){
+                        //decrease childCloseness because editCost is here negative
+                        traversalData[u].childClosenessWeight += editCostNodeToMove[c];
+                    }
+                    else{
+                        traversalData[u].childClosenessWeight -= insertEditCost;
+                    }
+                    --traversalData[u].childCloseness;
+                }
+
+                if (traversalData[u].childClosenessWeight < 0 || dynamicForest.depth(c) > maxDepth) {
+                    lastVisitedDFSNode[u] = c;
+                    break;
+                }
+
+                c = dynamicForest.nextDFSNodeOnEnter(c, u);
+            } else {
+                if(traversalData[c].childClosenessWeight == 0){
+                    traversalData[u].childCloseness += traversalData[c].childCloseness;
+                }
+                node p = dynamicForest.parent(c);
+                c = dynamicForest.nextChild(c, p);
+
+                while (c == p && c != u) {
+                    p = dynamicForest.parent(p);
+                    c = dynamicForest.nextChild(c, p);
+                }
+            }
+        }
+    }
+
+    TRACE("Edit difference after descending: ", traversalData[u].childCloseness, ", ", traversalData[u].childClosenessWeight);
 
     if (!randomness) {
-        if (sumPositiveEditsWeight > traversalData[u].scoreMaxWeight || traversalData[u].scoreMaxWeight == 0) {
-            traversalData[u].scoreMax = sumPositiveEdits;
-            traversalData[u].scoreMaxWeight = sumPositiveEditsWeight;
+        if (traversalData[u].sumPositiveEditsWeight > traversalData[u].scoreMaxWeight || traversalData[u].scoreMaxWeight == 0) {
+            traversalData[u].scoreMax = traversalData[u].sumPositiveEdits;
+            traversalData[u].scoreMaxWeight = traversalData[u].sumPositiveEditsWeight;
             traversalData[u].bestParentBelow = u;
         }
     } else {
         bool coin = false;
         double ownWeight = traversalData[u].numIndifferentChildren * std::log(2);
-        if (sumPositiveEditsWeight > traversalData[u].scoreMaxWeight || !traversalData[u].hasChoices()) {
-            traversalData[u].scoreMax = sumPositiveEdits;
-            traversalData[u].scoreMaxWeight = sumPositiveEditsWeight;
+        if (traversalData[u].sumPositiveEditsWeight > traversalData[u].scoreMaxWeight || !traversalData[u].hasChoices()) {
+            traversalData[u].scoreMax = traversalData[u].sumPositiveEdits;
+            traversalData[u].scoreMaxWeight = traversalData[u].sumPositiveEditsWeight;
             traversalData[u].logEqualBestChoices = ownWeight;
             // Either we do not adopt children, or we are at the lower end of a path.
             // Otherwise, there must be a node below u that is at least as good.
             //TODO check is that correct because we dont sort path before subtreeMove
             //assert(!sortPaths || sumPositiveEdits == 0 || dynamicForest.isLowerEnd(u));
             coin = true;
-        } else if (sumPositiveEditsWeight == traversalData[u].scoreMaxWeight) {
+        } else if (traversalData[u].sumPositiveEditsWeight == traversalData[u].scoreMaxWeight) {
             //ownWeight = traversalData[u].calculateOwnWeightForEqualChoices();
             traversalData[u].addLogChoices(ownWeight);
             coin = logRandomBool(ownWeight - traversalData[u].logEqualBestChoices);
@@ -1161,42 +1126,38 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
         }
         if (coin) {
             //update scoremax if scoremax weighted is identical to sumPositiveEditWeights, scoremax can be not identical to sumPositiveEdits
-            traversalData[u].scoreMax = sumPositiveEdits;
+            traversalData[u].scoreMax = traversalData[u].sumPositiveEdits;
             traversalData[u].bestParentBelow = u;
         }
     }
 
     assert(traversalData[u].scoreMaxWeight >= 0);
 
-    traversalData[u].scoreMax += (2 * numNeighborsAll[u] - subtreeSize);
-    if(editMatrixUsed){
-        traversalData[u].scoreMaxWeight += editCostSubtree[u];      
-    }
-    else{
-        traversalData[u].scoreMaxWeight += (numNeighborsAll[u] * removeEditCost) + ((numNeighborsAll[u] - subtreeSize) * insertEditCost);
-    }
+    traversalData[u].scoreMax += traversalData[u].subtreeEdits;
+    traversalData[u].scoreMaxWeight += traversalData[u].subtreeEditCosts;      
 
     TRACE("Maximum score at ", u, ": ", traversalData[u].scoreMax, ", ", traversalData[u].scoreMaxWeight);
     node p = dynamicForest.parent(u);
     TraversalData &parentData = (p == none) ? rootData : traversalData[p];
 
-    parentData.initializeForSubtree(generation);
+    parentData.initialize(generation);
 
-
+    int64_t parentEditCost = 0;
     if ((traversalData[u].scoreMaxWeight > 0 || traversalData[u].subtreeEditCosts > 0) && p != none) {
         if (useBucketQueue) {
             assert(dynamicForest.depth(p) <= maxDepth);
         }
-        if (!nodeTouchedSubtree[p]) {
-            nodeTouchedSubtree[p] = true;
-            if(!nodeTouched[p]){
-                touchedNodes.push_back(p);
+        if (!nodeTouched[p]) {
+            nodeTouched[p] = true;
+            if(!editMatrixUsed){
+                parentEditCost = ((numNeighborsAll[p] * removeEditCost) + ((numNeighborsAll[p] - subtreeSize) * insertEditCost));
             }
+            touchedNodes.push_back(p);
             if (!useBucketQueue) {
                 nextLevel.push_back(p);
-            } else if (!(traversalData[p].childClosenessWeight > 0 && nodeTouched[p]) && 
-                !(editMatrixUsed && editCostSubtree[u] >= 0) && 
-                !(!editMatrixUsed && ((numNeighborsAll[p] * removeEditCost) + ((numNeighborsAll[p] - subtreeSize) * insertEditCost)) >= 0)) { 
+            } else if (!(marker[p]) && 
+                !(editMatrixUsed && editCostSubtree[p] >= 0) && 
+                !(!editMatrixUsed && parentEditCost >= 0)) { 
                 // positive editcost already in queue
                 bucketQueue.insertParent(p);
             }
@@ -1225,6 +1186,8 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
         } else {
             ++parentData.numCloseChildren;
             //dont propagate childcloseness, already happend in local move
+            parentData.childCloseness += traversalData[u].childCloseness;
+            parentData.childClosenessWeight += traversalData[u].childClosenessWeight;
         }
     }
 }
