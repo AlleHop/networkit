@@ -538,7 +538,32 @@ void EditingRunner::localMove(node nodeToMove) {
     touchedNodes.clear();
 
     if(moveSubtrees){
+        subtreeMove(nodeToMove);
+    }
+    // cleanup for linear move
+    for (node u : touchedNodes) {
+        lastVisitedDFSNode[u] = u;
+        nodeTouched[u] = false;
+    }
+    for (node v : neighbors) {
+        marker[v] = false;
+    }
+    neighbors.clear();
+    touchedNodes.clear();
+
+}
+
+void EditingRunner::subtreeMove(node nodeToMove){
+    int64_t savedEdits =  0;
+    count savedEditsWeight = 0;
+    for( subtreeOption = 0; subtreeOption < 2 && savedEditsWeight == 0 ; subtreeOption ++){
         subtreeSize = 0;
+        //subtreeOption = 1;
+        if(subtreeOption == 1){
+            TRACE(dynamicForest.printPaths());
+            dynamicForest.moveNodeToLowerEnd(nodeToMove, marker);
+            TRACE(dynamicForest.printPaths());
+        }
         //calculate subtree size and nodes in subtree
         dynamicForest.dfsFrom(nodeToMove, [&](node c) {
             subtreeSize++;
@@ -546,10 +571,9 @@ void EditingRunner::localMove(node nodeToMove) {
             subtreeNodes.push_back(c);
 		}, [](node) {});
         TRACE("Subtreesize:", subtreeSize);
-    }
 
     //subtreeMove when subtree is more than one node
-    if(moveSubtrees && subtreeSize > 1  && subtreeSize <= std::max(50.0,sqrt(G.numberOfNodes())) && !insertRun){
+    if(subtreeSize > 1  && subtreeSize <= std::max(50.0,sqrt(G.numberOfNodes())) && !insertRun){
         //increase generation by one to reuse childCloseness but reset everything else
         generation++;
         subtreeExtDegree = 0;
@@ -752,8 +776,8 @@ void EditingRunner::localMove(node nodeToMove) {
 
         // calculate the number of saved edits as comparing the absolute number of edits doesn't make
         // sense
-        int64_t savedEdits = curEdits - bestEdits;
-        count savedEditsWeight = curEditsWeight - bestEditsWeight;
+        savedEdits = curEdits - bestEdits;
+        savedEditsWeight = curEditsWeight - bestEditsWeight;
 
         assert(!randomness || rootData.hasChoices());
 
@@ -782,28 +806,23 @@ void EditingRunner::localMove(node nodeToMove) {
             assert(weightEdits == countWeightOfEdits());
 #endif
         }
-    }
-    // cleanup for linear move
-    for (node u : touchedNodes) {
-        lastVisitedDFSNode[u] = u;
-        nodeTouched[u] = false;
-    }
-    for (node v : neighbors) {
-        marker[v] = false;
+
+        for (node u : touchedNodes) {
+            lastVisitedDFSNode[u] = u;
+            nodeTouched[u] = false;
+        }
+
+        parentCandidates.clear();
+        touchedNodes.clear();
+        //TODO Optimize: only reset necessary values
+        subtreeNeighbors.clear();
+        std::fill(numNeighborsAll.begin(), numNeighborsAll.end(), 0);
     }
     for (node v : subtreeNodes) {
         inSubtree[v] = false;
     }
-    neighbors.clear();
-    parentCandidates.clear();
-    touchedNodes.clear();
     subtreeNodes.clear();
-    //TODO Optimize: only reset necessary values
-    if(moveSubtrees){
-        subtreeNeighbors.clear();
-        std::fill(numNeighborsAll.begin(), numNeighborsAll.end(), 0);
     }
-
 }
 
 void EditingRunner::processNode(node u, node nodeToMove) {

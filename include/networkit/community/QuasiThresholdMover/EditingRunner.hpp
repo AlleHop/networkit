@@ -197,6 +197,7 @@ private:
 
     count numSubtreeMoves;
     count subtreeSize;
+    count subtreeOption;
     std::vector<bool> inSubtree;
     std::vector<node> subtreeNeighbors;
     std::vector<count> numNeighborsAll;
@@ -229,6 +230,7 @@ private:
     void localMove(node nodeToMove);
     void processNode(node u, node nodeToMove);
     void processNodeForSubtree(node u, node nodeToMove);
+    void subtreeMove(node nodeToMove);
     Graph getGraphFromEditMatrix();
     std::vector<node> getParentsForTree();
     void compareWithQuadratic(node nodeToMove) const;

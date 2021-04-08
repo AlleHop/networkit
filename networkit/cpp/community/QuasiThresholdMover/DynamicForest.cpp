@@ -194,6 +194,30 @@ void DynamicForest::moveUpNeighbor(node neighbor, node referenceNode) {
     assert(pathsValid());
 }
 
+void DynamicForest::moveNodeToLowerEnd(node referenceNode, const std::vector<bool> &marker) {
+    pid sp = path(referenceNode);
+    index oldPos = path_pos[referenceNode];
+    if (paths[sp].length() > 1 && oldPos != 0) {
+        node firstPathNode = paths[sp].pathNodes[0];
+        std::swap(paths[sp].pathNodes[path_pos[firstPathNode]],
+                  paths[sp].pathNodes[path_pos[referenceNode]]);
+        std::swap(path_pos[firstPathNode], path_pos[referenceNode]);
+        if(!marker[firstPathNode]){
+            paths[sp].subtreeReferenceNode = referenceNode;
+            paths[sp].subtreeNeighborCount = 0;
+            std::vector<node> nodes = paths[sp].pathNodes;
+            for (node v : nodes) {
+                if(marker[v]){
+                    moveUpSubtreeNeighbor(v, referenceNode);
+                }
+            }
+            paths[sp].subtreeReferenceNode = none;
+            paths[sp].subtreeNeighborCount = 0;
+        }
+    }
+    assert(pathsValid());
+}
+
 node DynamicForest::moveUpSubtreeNeighbor(node subtreeNeighbor, node subtreeReferenceNode) {
     pid sp = path(subtreeNeighbor);
     if (paths[sp].length() > 1) {
@@ -369,6 +393,9 @@ void DynamicForest::moveToAnyPosition(node u, const std::vector<node> &adoptedCh
     if(u == none || isLowerEnd(u)){
         for (node child : adoptedChildren) {
             oldParent = parent(child);
+            if(!isUpperEnd(child)){
+                splitPath(path(child), path_pos[oldParent]);
+            }
             setParentPath(path(child), path(u));
             oldChildren = children(oldParent);
         }

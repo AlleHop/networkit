@@ -17,6 +17,7 @@ public:
     void isolate(node u);
     void moveUpNeighbor(node neighbor, node referenceNode);
     node moveUpSubtreeNeighbor(node subtreeNeighbor, node subtreeReferenceNode);
+    void moveNodeToLowerEnd(node referenceNode, const std::vector<bool> &marker);
     void moveToPosition(node u, node p, const std::vector<node> &adoptedChildren);
     void moveToAnyPosition(node u, const std::vector<node> &adoptedChildren);
     Graph toGraph() const;
