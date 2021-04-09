@@ -537,7 +537,7 @@ void EditingRunner::localMove(node nodeToMove) {
     }
     touchedNodes.clear();
 
-    if(moveSubtrees){
+    if(moveSubtrees && !insertRun){
         subtreeMove(nodeToMove);
     }
     // cleanup for linear move
@@ -573,7 +573,7 @@ void EditingRunner::subtreeMove(node nodeToMove){
         TRACE("Subtreesize:", subtreeSize);
 
     //subtreeMove when subtree is more than one node
-    if(subtreeSize > 1  && subtreeSize <= std::max(50.0,sqrt(G.numberOfNodes())) && !insertRun){
+    if(subtreeSize > 1  && subtreeSize <= std::max(50.0,sqrt(G.numberOfNodes()))){
         //increase generation by one to reuse childCloseness but reset everything else
         generation++;
         subtreeExtDegree = 0;
