@@ -556,13 +556,26 @@ void EditingRunner::localMove(node nodeToMove) {
 void EditingRunner::subtreeMove(node nodeToMove){
     int64_t savedEdits =  0;
     count savedEditsWeight = 0;
-    for( subtreeOption = 0; subtreeOption < 2 && savedEditsWeight == 0 ; subtreeOption ++){
+    for( subtreeOption = 0; subtreeOption < 4 && savedEditsWeight == 0 ; subtreeOption ++){
         subtreeSize = 0;
+        bestEdits = 0;
+        bestEditsWeight = 0;
         //subtreeOption = 1;
-        if(subtreeOption == 1){
-            TRACE(dynamicForest.printPaths());
+        if(subtreeOption == 2 || subtreeOption == 3){
             dynamicForest.moveNodeToLowerEnd(nodeToMove, marker);
-            TRACE(dynamicForest.printPaths());
+        }
+        curChildren = dynamicForest.children(nodeToMove);
+        curParent = dynamicForest.parent(nodeToMove);
+        if((subtreeOption == 1 || subtreeOption == 3)&& !curChildren.empty()){
+            std::shuffle(curChildren.begin(), curChildren.end(), Aux::Random::getURNG());
+            curChildren.pop_back();
+            dynamicForest.moveToAnyPosition(curParent, curChildren);
+            if (subtreeOption == 1 || subtreeOption == 3) {
+                for(node v : curChildren){
+                bestEdits += traversalData[v].childCloseness;
+                bestEditsWeight += traversalData[v].childClosenessWeight;
+                }
+            }
         }
         //calculate subtree size and nodes in subtree
         dynamicForest.dfsFrom(nodeToMove, [&](node c) {
@@ -571,6 +584,9 @@ void EditingRunner::subtreeMove(node nodeToMove){
             subtreeNodes.push_back(c);
 		}, [](node) {});
         TRACE("Subtreesize:", subtreeSize);
+        if(subtreeSize > std::max(50.0,sqrt(G.numberOfNodes()))){
+            dynamicForest.moveToAnyPosition(nodeToMove, curChildren);
+        }
 
     //subtreeMove when subtree is more than one node
     if(subtreeSize > 1  && subtreeSize <= std::max(50.0,sqrt(G.numberOfNodes()))){
@@ -578,13 +594,10 @@ void EditingRunner::subtreeMove(node nodeToMove){
         generation++;
         subtreeExtDegree = 0;
         editCostNeighbors = 0;
-        curChildren = dynamicForest.children(nodeToMove);
-        curParent = dynamicForest.parent(nodeToMove);
         TRACE("Children: ", curChildren);
         TRACE("Parent: ", curParent);
         std::vector<int64_t> editCostNodeU = {};
         editCostNeighbors = 0;
-        TRACE(dynamicForest.printPaths());
         //calculate editCost for Subtree
         dynamicForest.dfsFrom(nodeToMove, [&](node u) {
             if(editMatrixUsed){
@@ -641,7 +654,6 @@ void EditingRunner::subtreeMove(node nodeToMove){
         //correct child closenesee above subtree
 
         //subtree sortPath
-        TRACE(dynamicForest.printPaths());
         if (subtreeSortPaths) {
             node nonSubtreeNeighbor;
             for (node v : subtreeNeighbors) {
@@ -649,7 +661,6 @@ void EditingRunner::subtreeMove(node nodeToMove){
                 //check if nodes differ
             }
         }
-        TRACE(dynamicForest.printPaths());
         //add parent candidates to queue
         //TODO get rid of forNodes?
         G.forNodes([&](node v) {
@@ -742,14 +753,13 @@ void EditingRunner::subtreeMove(node nodeToMove){
             assert(rootData.hasChoices());
         }
 
-        bestEdits = subtreeExtDegree - rootData.scoreMax;
+        bestEdits += subtreeExtDegree - rootData.scoreMax;
         if(editMatrixUsed){
-            bestEditsWeight = editCostNeighbors - (rootData.scoreMaxWeight);
+            bestEditsWeight += editCostNeighbors - (rootData.scoreMaxWeight);
         }
         else{
-            bestEditsWeight = (removeEditCost * subtreeExtDegree) - (rootData.scoreMaxWeight);
+            bestEditsWeight += (removeEditCost * subtreeExtDegree) - (rootData.scoreMaxWeight);
         }
-
         // If sortPaths and randomness is on, only adopt children when the chosen parent is the
         // lower end of its path.
         const TraversalData &bestParentData =
@@ -789,7 +799,7 @@ void EditingRunner::subtreeMove(node nodeToMove){
 
         TRACE("Best Parent for Subtree ", rootData.bestParentBelow);
         TRACE("Best adopted Children for Subtree ", bestChildren);
-        if (savedEditsWeight > 0 || randomness) {
+        if (savedEditsWeight > 0 || randomness || subtreeOption == 1 || subtreeOption == 3) {
             assert(savedEditsWeight >= 0);
             std::vector<node> nodeToMoveVec { nodeToMove };
             TRACE("SubtreeMove: current Parent: ", curParent, " new Parent: ", rootData.bestParentBelow);
@@ -1162,7 +1172,7 @@ void EditingRunner::processNodeForSubtree(node u, node nodeToMove) {
     parentData.initialize(generation);
 
     int64_t parentEditCost = 0;
-    if ((traversalData[u].scoreMaxWeight > 0 || traversalData[u].subtreeEditCosts > 0) && p != none) {
+    if ((traversalData[u].scoreMaxWeight > 0 || traversalData[u].subtreeEditCosts > 0 || traversalData[u].childClosenessWeight > 0) && p != none) {
         if (useBucketQueue) {
             assert(dynamicForest.depth(p) <= maxDepth);
         }

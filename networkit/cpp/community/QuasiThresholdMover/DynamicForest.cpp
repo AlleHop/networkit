@@ -383,7 +383,6 @@ void DynamicForest::moveToAnyPosition(node u, const std::vector<node> &adoptedCh
     std::vector<node> oldChildren;
     node oldParent = none;
 #ifndef NDEBUG
-    TRACE(printPaths());
 #endif
     // place all children below node
     if (u != none && !isLowerEnd(u) && adoptedChildren.size() > 0) {
@@ -406,7 +405,6 @@ void DynamicForest::moveToAnyPosition(node u, const std::vector<node> &adoptedCh
             unionPaths(path(oldParent), path(oldChildren[0]));
         }
     }
-    TRACE(printPaths());
     if(oldParent != none){
         updateDepthInSubtree(path(oldParent));
     }
