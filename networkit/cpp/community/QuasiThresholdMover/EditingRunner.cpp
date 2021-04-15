@@ -590,7 +590,6 @@ void EditingRunner::subtreeMove(node nodeToMove){
 
     //subtreeMove when subtree is more than one node
     if(subtreeSize > 1  && subtreeSize <= std::max(50.0,sqrt(G.numberOfNodes()))){
-        //increase generation by one to reuse childCloseness but reset everything else
         generation++;
         subtreeExtDegree = 0;
         editCostNeighbors = 0;
@@ -651,14 +650,11 @@ void EditingRunner::subtreeMove(node nodeToMove){
             //not necessary for children because they are moved and edits dont change
         }
 
-        //correct child closenesee above subtree
-
         //subtree sortPath
         if (subtreeSortPaths) {
             node nonSubtreeNeighbor;
             for (node v : subtreeNeighbors) {
                 nonSubtreeNeighbor = dynamicForest.moveUpSubtreeNeighbor(v, nodeToMove);
-                //check if nodes differ
             }
         }
         //add parent candidates to queue
@@ -722,7 +718,7 @@ void EditingRunner::subtreeMove(node nodeToMove){
             }
         }
 
-            //save sum positive editWeights for root
+        //save sum positive editWeights for root
         rootData.sumPositiveEdits = rootData.childCloseness;
         rootData.sumPositiveEditsWeight = rootData.childClosenessWeight;
         if (!randomness) {

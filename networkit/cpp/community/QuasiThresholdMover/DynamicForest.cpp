@@ -378,12 +378,9 @@ void DynamicForest::moveToPosition(node u, node p, const std::vector<node> &adop
 }
 
 void DynamicForest::moveToAnyPosition(node u, const std::vector<node> &adoptedChildren) {
-    // check that the node is isolated
     pid oldPath = path(u);
     std::vector<node> oldChildren;
     node oldParent = none;
-#ifndef NDEBUG
-#endif
     // place all children below node
     if (u != none && !isLowerEnd(u) && adoptedChildren.size() > 0) {
         splitPath(oldPath, path_pos[u]);
