@@ -1053,10 +1053,8 @@ TEST_F(CommunityGTest, testWeightedCostMatrix) {
 
 TEST_F(CommunityGTest, testBioWeightedCostMatrix) {
   std::string str;
-  //std::getline(std::cin, str);
   Aux::Random::setSeed(1, false);
   std::vector<std::vector<int64_t>>  editCostMatrix;
-  //editCostMatrix.resize(13);
   std::string line;
 	int pos;
   std::vector<int64_t> LINE;
@@ -1079,9 +1077,6 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrix) {
     ln.push_back(rest);
 		editCostMatrix.push_back(ln);
 	}
-  for(count i = 0; i< editCostMatrix.size(); i++){
-    editCostMatrix[i].resize(23);
-  }
 
   count minimum = 3201;
 	Graph graph = METISGraphReader().read("../input/biological/graphs/bio-nr-1897-size-23.graph");
@@ -1236,10 +1231,8 @@ TEST_F(CommunityGTest, testWeightedMatrixSubtreeMoveRnd) {
 
 TEST_F(CommunityGTest, testBioWeightedCostMatrixSubtreeMove) {
   std::string str;
-  //std::getline(std::cin, str);
   Aux::Random::setSeed(0, false);
   std::vector<std::vector<int64_t>>  editCostMatrix;
-  //editCostMatrix.resize(13);
   std::string line;
 	int pos;
   std::vector<int64_t> LINE;
@@ -1262,9 +1255,6 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrixSubtreeMove) {
     ln.push_back(rest);
 		editCostMatrix.push_back(ln);
 	}
-  for(count i = 0; i< editCostMatrix.size(); i++){
-    editCostMatrix[i].resize(23);
-  }
 
   count minimum = 3201;
 	Graph graph = METISGraphReader().read("../input/biological/graphs/bio-nr-1897-size-23.graph");
@@ -1587,5 +1577,45 @@ TEST_F(CommunityGTest, benchQuasiThresholdMover) {
   Graph G = METISGraphReader().read(graphPath);
   QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(G, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::ASC_DEGREE_INSERT, 1, true, false);
   mover.run();  
+}
+
+TEST_F(CommunityGTest, benchQuasiThresholdMoverSubtreeMove) {
+  std::string graphName, graphPath, weightPath;
+  std::cout << "[INPUT] Bio Graph Name >" << std::endl;
+  std::getline(std::cin, graphName);
+  Aux::Random::setSeed(42, true);
+  graphPath = "../input/biological/graphs/" + graphName + ".graph";
+  weightPath = "../input/biological/weights/" + graphName + ".csv";
+  Graph G = METISGraphReader().read(graphPath);
+  std::vector<std::vector<int64_t>>  editCostMatrix;
+
+  std::string line;
+	int pos;
+  std::vector<int64_t> LINE;
+
+	std::ifstream in(weightPath);
+	if(!in.is_open())
+	{
+		std::cout << "Failed to open file" << std::endl;
+	}
+	while( std::getline(in,line) )
+	{
+		std::vector<int64_t> ln;
+		while( (pos = line.find(',')) >= 0)
+		{
+			int64_t field = std::stoi(line.substr(0,pos));
+			line = line.substr(pos+1);
+			ln.push_back(field);
+		}
+    int64_t rest = std::stoi(line);
+    ln.push_back(rest);
+		editCostMatrix.push_back(ln);
+	}
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(G, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 400, true, true, true, false, 100UL, true,1,1,editCostMatrix);
+  mover.run();  
+  count used = mover.getNumberOfEdits();
+  count usedWeight = mover.getWeightOfEdits();
+  INFO(used," Number of Edits");
+  INFO(usedWeight, " Weight of Edits");
 }
 } /* namespace NetworKit */
