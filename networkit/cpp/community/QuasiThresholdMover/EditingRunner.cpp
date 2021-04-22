@@ -595,13 +595,9 @@ void EditingRunner::subtreeMove(node nodeToMove){
         editCostNeighbors = 0;
         TRACE("Children: ", curChildren);
         TRACE("Parent: ", curParent);
-        std::vector<int64_t> editCostNodeU = {};
         editCostNeighbors = 0;
         //calculate editCost for Subtree
         dynamicForest.dfsFrom(nodeToMove, [&](node u) {
-            if(editMatrixUsed){
-                editCostNodeU = editCostMatrix[u];
-            }
 		    G.forEdgesOf(u, [&](node v) {
 				if (!inSubtree[v]) {
 					++numNeighborsAll[v];
@@ -610,7 +606,7 @@ void EditingRunner::subtreeMove(node nodeToMove){
                         subtreeNeighbors.push_back(v);
                     }
                     if(editMatrixUsed){
-                        editCostNeighbors += editCostNodeU[v];
+                        editCostNeighbors += editCostMatrix[u][v];
                     }
 				}
 			});
@@ -1460,8 +1456,6 @@ count EditingRunner::countWeightOfEdits() const {
     count weightOfInsertEdits = 0;
     count numExistingEdges = 0;
     count numMissingEdges = 0;
-    std::vector<int64_t> editCostNodeU = {};
-    std::vector<int64_t> editCostNodeP = {};
     std::vector<bool> marker(G.upperNodeIdBound());
 
     dynamicForest.forChildrenOf(none, [&](node r) {
@@ -1471,20 +1465,17 @@ count EditingRunner::countWeightOfEdits() const {
             [&](node u) { // on enter
                 count upperNeighbors = 0;
 
-                if(editMatrixUsed){
-                    editCostNodeU = editCostMatrix[u];
-                }
                 G.forEdgesOf(u, [&](node v) {
                     if (marker[v]){
                         ++upperNeighbors;
                         //-remove
                         if(editMatrixUsed){
-                            weightOfRemoveEdits -= editCostNodeU[v];
+                            weightOfRemoveEdits -= editCostMatrix[u][v];
                         }
                     }
                     else if(editMatrixUsed) {
                         //+remove
-                        weightOfRemoveEdits += editCostNodeU[v];
+                        weightOfRemoveEdits += editCostMatrix[u][v];
                     }
                 });
                 numExistingEdges += upperNeighbors;
@@ -1499,10 +1490,9 @@ count EditingRunner::countWeightOfEdits() const {
     });
     if(editMatrixUsed){
         G.forNodes([&](node u) {
-            editCostNodeU = editCostMatrix[u];
             dynamicForest.forAncestors(u, [&](node p) {
-                if(editCostNodeU[p] < 0 && u != p){
-                    weightOfInsertEdits += (-1) * editCostNodeU[p];
+                if(editCostMatrix[u][p] < 0 && u != p){
+                    weightOfInsertEdits += (-1) * editCostMatrix[u][p];
                 }
             });
         });
