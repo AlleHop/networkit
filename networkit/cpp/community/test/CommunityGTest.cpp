@@ -921,7 +921,7 @@ TEST_F(CommunityGTest, testInclusionMinimalWeightedCost) {
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
-  count usedWeight = mover.getWeightOfEdits();
+  count usedCost = mover.getCostOfEdits();
   assert(used >= minimum);
   
   std::vector<std::pair<std::pair<node, node>, bool>> edits;
@@ -941,7 +941,7 @@ TEST_F(CommunityGTest, testInclusionMinimalWeightedCost) {
   count pow_set_size = pow(2, used-minimum);
   INFO(used-minimum, " edits away from minimum");
   INFO(used, "," , edits.size()," Number of Edits");
-  INFO(usedWeight, " Weight of Edits");
+  INFO(usedCost, " Cost of Edits");
 
   GraphDifference difference(karate, Q);
   difference.run();
@@ -949,7 +949,7 @@ TEST_F(CommunityGTest, testInclusionMinimalWeightedCost) {
   count edgeInsertions = difference.getNumberOfEdgeAdditions();
   INFO(edgeRemovals," * ",removeEditCost, " Remove Edits");
   INFO(edgeInsertions," * ",insertEditCost,  " Insert Edits");
-  assert((edgeRemovals * removeEditCost) + (edgeInsertions * insertEditCost) == usedWeight);
+  assert((edgeRemovals * removeEditCost) + (edgeInsertions * insertEditCost) == usedCost);
 }
 
 TEST_F(CommunityGTest, testInclusionMinimalBioWeightedCost) {
@@ -963,7 +963,7 @@ TEST_F(CommunityGTest, testInclusionMinimalBioWeightedCost) {
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
-  count usedWeight = mover.getWeightOfEdits();
+  count usedCost = mover.getCostOfEdits();
   assert(used >= minimum);
   
   std::vector<std::pair<std::pair<node, node>, bool>> edits;
@@ -983,7 +983,7 @@ TEST_F(CommunityGTest, testInclusionMinimalBioWeightedCost) {
   count pow_set_size = pow(2, used-minimum);
   INFO(used-minimum, " edits away from minimum");
   INFO(used, "," , edits.size()," Number of Edits");
-  INFO(usedWeight, " Weight of Edits");
+  INFO(usedCost, " Cost of Edits");
 
   GraphDifference difference(bio, Q);
   difference.run();
@@ -991,7 +991,7 @@ TEST_F(CommunityGTest, testInclusionMinimalBioWeightedCost) {
   count edgeInsertions = difference.getNumberOfEdgeAdditions();
   INFO(edgeRemovals," * ",removeEditCost, " Remove Edits");
   INFO(edgeInsertions," * ",insertEditCost,  " Insert Edits");
-  assert((edgeRemovals * removeEditCost) + (edgeInsertions * insertEditCost) == usedWeight);
+  assert((edgeRemovals * removeEditCost) + (edgeInsertions * insertEditCost) == usedCost);
 }
 
 TEST_F(CommunityGTest, testWeightedCostMatrix) {
@@ -1021,7 +1021,7 @@ TEST_F(CommunityGTest, testWeightedCostMatrix) {
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
-  count usedWeight = mover.getWeightOfEdits();
+  count usedCost = mover.getCostOfEdits();
   assert(used >= minimum);
   
   std::vector<std::pair<std::pair<node, node>, bool>> edits;
@@ -1041,7 +1041,7 @@ TEST_F(CommunityGTest, testWeightedCostMatrix) {
   count pow_set_size = pow(2, used-minimum);
   INFO(used-minimum, " edits away from minimum");
   INFO(used, "," , edits.size()," Number of Edits");
-  INFO(usedWeight, " Weight of Edits");
+  INFO(usedCost, " Cost of Edits");
 
   GraphDifference difference(karate, Q);
   difference.run();
@@ -1085,8 +1085,8 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrix) {
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
-  count usedWeight = mover.getWeightOfEdits();
-  assert(usedWeight >= minimum);
+  count usedCost = mover.getCostOfEdits();
+  assert(usedCost >= minimum);
   
   std::vector<std::pair<std::pair<node, node>, bool>> edits;
   for(node u = 0; u < graph.upperNodeIdBound(); u++){
@@ -1102,10 +1102,10 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrix) {
   
   assert(edits.size() == used);
    
-  count pow_set_size = pow(2, usedWeight-minimum);
-  INFO(usedWeight-minimum, " edits Cost away from minimum");
+  count pow_set_size = pow(2, usedCost-minimum);
+  INFO(usedCost-minimum, " edits Cost away from minimum");
   INFO(used, "," , edits.size()," Number of Edits");
-  INFO(usedWeight, " Weight of Edits");
+  INFO(usedCost, " Cost of Edits");
 
   GraphDifference difference(graph, Q);
   difference.run();
@@ -1142,7 +1142,7 @@ TEST_F(CommunityGTest, testWeightedMatrixSubtreeMove) {
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
-  count usedWeight = mover.getWeightOfEdits();
+  count usedCost = mover.getCostOfEdits();
   assert(used >= minimum);
   
   std::vector<std::pair<std::pair<node, node>, bool>> edits;
@@ -1162,7 +1162,7 @@ TEST_F(CommunityGTest, testWeightedMatrixSubtreeMove) {
   count pow_set_size = pow(2, used-minimum);
   INFO(used-minimum, " edits away from minimum");
   INFO(used, "," , edits.size()," Number of Edits");
-  INFO(usedWeight, " Weight of Edits");
+  INFO(usedCost, " Cost of Edits");
 
   GraphDifference difference(karate, Q);
   difference.run();
@@ -1199,7 +1199,7 @@ TEST_F(CommunityGTest, testWeightedMatrixSubtreeMoveRnd) {
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
-  count usedWeight = mover.getWeightOfEdits();
+  count usedCost = mover.getCostOfEdits();
   assert(used >= minimum);
   
   std::vector<std::pair<std::pair<node, node>, bool>> edits;
@@ -1219,7 +1219,7 @@ TEST_F(CommunityGTest, testWeightedMatrixSubtreeMoveRnd) {
   count pow_set_size = pow(2, used-minimum);
   INFO(used-minimum, " edits away from minimum");
   INFO(used, "," , edits.size()," Number of Edits");
-  INFO(usedWeight, " Weight of Edits");
+  INFO(usedCost, " Cost of Edits");
 
   GraphDifference difference(karate, Q);
   difference.run();
@@ -1263,8 +1263,8 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrixSubtreeMove) {
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
-  count usedWeight = mover.getWeightOfEdits();
-  assert(usedWeight >= minimum);
+  count usedCost = mover.getCostOfEdits();
+  assert(usedCost >= minimum);
   
   std::vector<std::pair<std::pair<node, node>, bool>> edits;
   for(node u = 0; u < graph.upperNodeIdBound(); u++){
@@ -1280,10 +1280,10 @@ TEST_F(CommunityGTest, testBioWeightedCostMatrixSubtreeMove) {
   
   assert(edits.size() == used);
    
-  count pow_set_size = pow(2, usedWeight-minimum);
-  INFO(usedWeight-minimum, " edits Cost away from minimum");
+  count pow_set_size = pow(2, usedCost-minimum);
+  INFO(usedCost-minimum, " edits Cost away from minimum");
   INFO(used, "," , edits.size()," Number of Edits");
-  INFO(usedWeight, " Weight of Edits");
+  INFO(usedCost, " Cost of Edits");
 
   GraphDifference difference(graph, Q);
   difference.run();
@@ -1304,7 +1304,7 @@ TEST_F(CommunityGTest, testRandomTreeWeightedCost) {
   mover.run();
   Graph Q = mover.getQuasiThresholdGraph();
   count used = mover.getNumberOfEdits();
-  count usedWeight = mover.getWeightOfEdits();
+  count usedCost = mover.getCostOfEdits();
   assert(used >= minimum);
   
   std::vector<std::pair<std::pair<node, node>, bool>> edits;
@@ -1324,7 +1324,7 @@ TEST_F(CommunityGTest, testRandomTreeWeightedCost) {
   count pow_set_size = pow(2, used-minimum);
   INFO(used-minimum, " edits away from minimum");
   INFO(used, "," , edits.size()," Number of Edits");
-  INFO(usedWeight, " Weight of Edits");
+  INFO(usedCost, " Cost of Edits");
 
   GraphDifference difference(karate, Q);
   difference.run();
@@ -1332,7 +1332,7 @@ TEST_F(CommunityGTest, testRandomTreeWeightedCost) {
   count edgeInsertions = difference.getNumberOfEdgeAdditions();
   INFO(edgeRemovals," * ",removeEditCost, " Remove Edits");
   INFO(edgeInsertions," * ",insertEditCost,  " Insert Edits");
-  assert((edgeRemovals * removeEditCost) + (edgeInsertions * insertEditCost) == usedWeight);
+  assert((edgeRemovals * removeEditCost) + (edgeInsertions * insertEditCost) == usedCost);
 }
 
 TEST_F(CommunityGTest, testRandomness) {
@@ -1611,11 +1611,11 @@ TEST_F(CommunityGTest, benchQuasiThresholdMoverSubtreeMove) {
     ln.push_back(rest);
 		editCostMatrix.push_back(ln);
 	}
-  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(G, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 400, true, true, true, false, 100UL, true,1,1,editCostMatrix);
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(G, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 400, true, true, true, true, 100UL, true,1,1,editCostMatrix);
   mover.run();  
   count used = mover.getNumberOfEdits();
-  count usedWeight = mover.getWeightOfEdits();
+  count usedCost = mover.getCostOfEdits();
   INFO(used," Number of Edits");
-  INFO(usedWeight, " Weight of Edits");
+  INFO(usedCost, " Cost of Edits");
 }
 } /* namespace NetworKit */

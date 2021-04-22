@@ -24,7 +24,7 @@ public:
     Graph getQuasiThresholdGraph() const;
     Graph getDynamicForestGraph() const;
     count getNumberOfEdits() const;
-    count getWeightOfEdits() const;
+    count getCostOfEdits() const;
     count getUsedIterations() const;
     count getPlateauSize() const;
     count getRootEqualBestParents() const;
@@ -51,7 +51,7 @@ private:
 
     count usedIterations;
     count numEdits;
-    count weightEdits;
+    count costEdits;
     count plateauSize;
     count rootEqualBestParents;
 

@@ -9,7 +9,7 @@ QuasiThresholdEditingLocalMover::QuasiThresholdEditingLocalMover(
     bool randomness, bool moveSubtrees, bool subtreeSortPaths, count maxPlateauSize, bool useBucketQueue, count insertEditCost, count removeEditCost, std::vector<std::vector<int64_t>> editCostMatrix)
     : G(G), initialization(initialization), maxIterations(maxIterations), sortPaths(sortPaths),
       randomness(randomness), moveSubtrees(moveSubtrees), subtreeSortPaths(subtreeSortPaths), maxPlateauSize(maxPlateauSize), useBucketQueue(useBucketQueue), insertEditCost(insertEditCost), removeEditCost(removeEditCost), editCostMatrix(editCostMatrix),
-      usedIterations(0), numEdits(0), weightEdits(0), rootEqualBestParents(0) {}
+      usedIterations(0), numEdits(0), costEdits(0), rootEqualBestParents(0) {}
 
 void QuasiThresholdEditingLocalMover::run() {
     EditingRunner runner(G, initialization, maxIterations, sortPaths, randomness, moveSubtrees, subtreeSortPaths, maxPlateauSize,
@@ -17,7 +17,7 @@ void QuasiThresholdEditingLocalMover::run() {
     runner.runLocalMover();
     usedIterations = runner.getUsedIterations();
     numEdits = runner.getNumberOfEdits();
-    weightEdits = runner.getWeightOfEdits();
+    costEdits = runner.getCostOfEdits();
     plateauSize = runner.getPlateauSize();
     rootEqualBestParents = runner.getRootEqualBestParents();
     quasiThresholdGraph = runner.getQuasiThresholdGraph();
@@ -41,9 +41,9 @@ count QuasiThresholdEditingLocalMover::getNumberOfEdits() const {
     return numEdits;
 }
 
-count QuasiThresholdEditingLocalMover::getWeightOfEdits() const {
+count QuasiThresholdEditingLocalMover::getCostOfEdits() const {
     assureFinished();
-    return weightEdits;
+    return costEdits;
 }
 
 count QuasiThresholdEditingLocalMover::getUsedIterations() const {

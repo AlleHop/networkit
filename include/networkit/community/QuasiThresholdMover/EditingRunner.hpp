@@ -24,7 +24,7 @@ public:
 
     count getNumberOfEdits() const { return numEdits; };
 
-    count getWeightOfEdits() const { return weightEdits; };
+    count getCostOfEdits() const { return costEdits; };
 
     count getUsedIterations() const { return usedIterations; };
 
@@ -43,11 +43,11 @@ private:
         count generation;
         int64_t scoreMax;
         int64_t childCloseness;
-        int64_t scoreMaxWeight;
-        int64_t childClosenessWeight;
+        int64_t scoreMaxCost;
+        int64_t childClosenessCost;
         int64_t subtreeEdits;
         int64_t sumPositiveEdits;
-        int64_t sumPositiveEditsWeight;
+        int64_t sumPositiveEditCosts;
         int64_t subtreeEditCosts;
         node bestParentBelow;
         /**
@@ -60,8 +60,8 @@ private:
         count numCloseChildren;
 
         TraversalData()
-            : generation(none), scoreMax(0), childCloseness(0), scoreMaxWeight(0),
-              childClosenessWeight(0), bestParentBelow(none),
+            : generation(none), scoreMax(0), childCloseness(0), scoreMaxCost(0),
+              childClosenessCost(0), bestParentBelow(none),
               subtreeEdits(0), subtreeEditCosts(0),
               logEqualBestChoices(-std::numeric_limits<double>::infinity()),
               numIndifferentChildren(0), numCloseChildren(0){};
@@ -71,10 +71,10 @@ private:
                 generation = currentGeneration;
                 scoreMax = 0;
                 childCloseness = 0;
-                scoreMaxWeight = 0;
-                childClosenessWeight = 0;
+                scoreMaxCost = 0;
+                childClosenessCost = 0;
                 sumPositiveEdits = 0;
-                sumPositiveEditsWeight = 0;
+                sumPositiveEditCosts = 0;
                 subtreeEdits = 0;
                 subtreeEditCosts = 0;
                 bestParentBelow = none;
@@ -134,8 +134,8 @@ private:
             ss << "\n";
             ss << "scoreMax: " << scoreMax << "\n";
             ss << "childCloseness: " << childCloseness << "\n";
-            ss << "scoreMaxWeight: " << scoreMaxWeight << "\n";
-            ss << "childClosenessWeight: " << childClosenessWeight << "\n";
+            ss << "scoreMaxCost: " << scoreMaxCost << "\n";
+            ss << "childClosenessCost: " << childClosenessCost << "\n";
             ss << "subtreeEdits: " << subtreeEdits << "\n";
             ss << "subtreeEditCosts: " << subtreeEditCosts << "\n";
             ss << "logEqualBestChoices: " << logEqualBestChoices << "\n";
@@ -162,7 +162,7 @@ private:
     std::vector<std::vector<int64_t>> editCostMatrix;
 
     count numEdits;
-    count weightEdits;
+    count costEdits;
 
     Aux::SignalHandler handler;
     DynamicForest dynamicForest;
@@ -188,9 +188,11 @@ private:
     TraversalData rootData;
 
     count bestEdits;
-    count bestEditsWeight;
+    count bestEditCosts;
     count curEdits;
-    count curEditsWeight;
+    count curEditCosts;
+    int64_t savedEdits;
+    count savedEditCosts;
     node curParent;
     std::vector<node> curChildren;
     std::vector<node> bestChildren;
@@ -213,7 +215,7 @@ private:
     count numNodesMoved;
     
     count editsBefore;
-    count editsWeightBefore;
+    count editCostsBefore;
     count currentPlateau;
     count actualMaximumPlateau;
 
@@ -235,7 +237,7 @@ private:
     std::vector<node> getParentsForTree();
     void compareWithQuadratic(node nodeToMove) const;
     count countNumberOfEdits() const;
-    count countWeightOfEdits() const;
+    count countCostOfEdits() const;
     count editsIncidentTo(node u) const;
 
     bool logRandomBool(double logProbability) {
