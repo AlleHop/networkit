@@ -655,8 +655,7 @@ void EditingRunner::subtreeMove(node nodeToMove){
         }
         //add parent candidates to queue
         //TODO get rid of forNodes?
-        G.forNodes([&](node v) {
-            if(!inSubtree[v]) {
+        for (node v : subtreeNeighbors)  {
                 int64_t testEditCost = ((numNeighborsAll[v] * removeEditCost) + ((numNeighborsAll[v] - subtreeSize) * insertEditCost));
                 //fill queue with candidates with positive editCost or neighbors of nodetomove
                 if ( marker[v] || 
@@ -664,8 +663,7 @@ void EditingRunner::subtreeMove(node nodeToMove){
                     (editMatrixUsed && editCostSubtree[v] >= 0)) {
                     parentCandidates.push_back(v);
                 }
-            }
-        });
+        };
 
         if (useBucketQueue) {
             bucketQueue.fill(parentCandidates, dynamicForest);
