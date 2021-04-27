@@ -17,7 +17,7 @@ public:
                                     count maxIterations = 5, bool sortPaths = true,
                                     bool randomness = false, bool moveSubtrees = false, bool subtreeSortPaths = false, count maxPlateauSize = 4,
                                     bool useBucketQueue = true,
-                                    count insertEditCost = 1, count removeEditCost = 1, std::vector<std::vector<int64_t>> editCostMatrix = {});
+                                    count insertEditCost = 1, count removeEditCost = 1, const std::vector<std::vector<int64_t>> editCostMatrix = {});
 
     void run() override;
 
@@ -45,7 +45,7 @@ private:
     bool useBucketQueue;
     count insertEditCost;
     count removeEditCost;
-    std::vector<std::vector<int64_t>> editCostMatrix;
+    const std::vector<std::vector<int64_t>> editCostMatrix;
 
     std::vector<node> order;
 
