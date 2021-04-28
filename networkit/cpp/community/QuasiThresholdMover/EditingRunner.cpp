@@ -301,8 +301,9 @@ void EditingRunner::localMove(node nodeToMove) {
                         curEditCosts += 1 * insertEditCost - marker[c] * (insertEditCost + removeEditCost);
                     }
                 }
+                return DynamicForest::ReturnState::CONTINUE;
             },
-            [](node) {});
+            [](node) {return DynamicForest::ReturnState::CONTINUE;});
         dynamicForest.forAncestors(nodeToMove, [&](node p) {
             //for all ancestors insert one edge; no insertion necessary if ancestor is neighbor of nodeToMove
             curEdits += 1 - 2 * marker[p];
@@ -582,7 +583,12 @@ void EditingRunner::subtreeMove(node nodeToMove){
             subtreeSize++;
             inSubtree[c] = true;
             subtreeNodes.push_back(c);
-		}, [](node) {});
+            if(subtreeSize > std::max(50.0,sqrt(G.numberOfNodes()))){
+                return DynamicForest::ReturnState::BREAK;
+            } else {
+                return DynamicForest::ReturnState::CONTINUE;
+            }
+		}, [](node) {return DynamicForest::ReturnState::CONTINUE;});
         TRACE("Subtreesize:", subtreeSize);
         if(subtreeSize > std::max(50.0,sqrt(G.numberOfNodes()))){
             dynamicForest.moveToAnyPosition(nodeToMove, curChildren);
@@ -610,7 +616,8 @@ void EditingRunner::subtreeMove(node nodeToMove){
                     }
 				}
 			});
-		}, [](node) {});
+            return DynamicForest::ReturnState::CONTINUE;
+		}, [](node) {return DynamicForest::ReturnState::CONTINUE;});
 
         //add up editCost in matrix for nodes in subtree
         if(editMatrixUsed){
@@ -1253,6 +1260,7 @@ void EditingRunner::compareWithQuadratic(node nodeToMove) const {
                         missingAboveCosted[u] += missingAboveCosted[p];
                         existingAboveCosted[u] += existingAboveCosted[p];
                     }
+                    return DynamicForest::ReturnState::CONTINUE;
                 },
                 [&](node u) {
                     node p = dynamicForest.parent(u);
@@ -1264,6 +1272,7 @@ void EditingRunner::compareWithQuadratic(node nodeToMove) const {
                         if (usingDeepNeighbors[u])
                             usingDeepNeighbors[p] = true;
                     }
+                    return DynamicForest::ReturnState::CONTINUE;
                 });
         }
     });
@@ -1334,7 +1343,7 @@ void EditingRunner::compareWithQuadratic(node nodeToMove) const {
 
     auto tryEditBelow = [&](node p) {
         if (p == nodeToMove)
-            return;
+            return DynamicForest::ReturnState::CONTINUE;;
         count editCosts = editCostsOffset;
         count edits = numNeighbors;
         if(!editMatrixUsed)
@@ -1378,10 +1387,11 @@ void EditingRunner::compareWithQuadratic(node nodeToMove) const {
             minChildren = std::move(children);
             minParent = p;
         }
+        return DynamicForest::ReturnState::CONTINUE;
     };
 
     dynamicForest.dfsFrom(
-        none, [](node) {}, tryEditBelow);
+        none, [](node) {return DynamicForest::ReturnState::CONTINUE;}, tryEditBelow);
     tryEditBelow(none);
     //correct assertion? assert(minEdits >= bestEdits);
     //assert(minEdits <= bestEdits);
@@ -1437,10 +1447,12 @@ count EditingRunner::countNumberOfEdits() const {
                 numMissingEdges += depth - upperNeighbors;
                 marker[u] = true;
                 depth += 1;
+                return DynamicForest::ReturnState::CONTINUE;
             },
             [&](node u) { // on exit
                 marker[u] = false;
                 depth -= 1;
+                return DynamicForest::ReturnState::CONTINUE;
             });
     });
 
@@ -1480,10 +1492,12 @@ count EditingRunner::countCostOfEdits() const {
                 numMissingEdges += depth - upperNeighbors;
                 marker[u] = true;  
                 depth += 1;
+                return DynamicForest::ReturnState::CONTINUE;
             },
             [&](node u) { // on exit
                 marker[u] = false;
                 depth -= 1;
+                return DynamicForest::ReturnState::CONTINUE;
             });
     });
     if(editMatrixUsed){
@@ -1522,8 +1536,9 @@ count EditingRunner::editsIncidentTo(node u) const {
                 visited[w] = 1;
                 if (!G.hasEdge(w, u))
                     edits++;
+                return DynamicForest::ReturnState::CONTINUE;
             },
-            [&](node) {});
+            [&](node) {return DynamicForest::ReturnState::CONTINUE;});
     });
 
     G.forEdgesOf(u, [&](node w) {

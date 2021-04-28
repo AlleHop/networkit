@@ -13,6 +13,7 @@ public:
     DynamicForest();
     DynamicForest(const Graph &G, const std::vector<node> &parents = std::vector<node>());
     DynamicForest(const std::vector<node> &parents);
+    enum class ReturnState{ CONTINUE, BREAK};
 
     void isolate(node u);
     void moveUpNeighbor(node neighbor, node referenceNode);
@@ -131,29 +132,30 @@ public:
         }
     }
 
-    template <typename F1, typename F2>
+    template <class F1, class F2>
     void dfsFrom(node u, F1 onEnter, F2 onExit) const {
         struct DFSEvent {
             node n;
             bool isEnter;
             DFSEvent(node n, bool isEnter) : n(n), isEnter(isEnter){};
         };
+        ReturnState returnState  = ReturnState::CONTINUE;
 
         std::stack<DFSEvent> toProcess;
         toProcess.emplace(u, false);
         toProcess.emplace(u, true);
-        while (!toProcess.empty()) {
+        while (!toProcess.empty() && returnState != ReturnState::BREAK) {
             DFSEvent ev = toProcess.top();
             toProcess.pop();
 
             if (ev.isEnter) {
-                onEnter(ev.n);
+                returnState = onEnter(ev.n);
                 forChildrenOf(ev.n, [&](node c) {
                     toProcess.emplace(c, false);
                     toProcess.emplace(c, true);
                 });
             } else {
-                onExit(ev.n);
+                returnState = onExit(ev.n);
             }
         }
     }

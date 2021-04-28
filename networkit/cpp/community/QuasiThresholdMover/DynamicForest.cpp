@@ -493,8 +493,9 @@ bool DynamicForest::pathsValid() {
                     assert(path_membership[c] == path_membership[children(c)[0]]);
                 }
             }
+            return DynamicForest::ReturnState::CONTINUE;
         },
-        [](node) {});
+        [](node) {return DynamicForest::ReturnState::CONTINUE;});
 
     // check that free list is proper
     for (pid freePlace : freeList) {
@@ -539,13 +540,14 @@ Graph DynamicForest::toGraph() const {
 
     for (pid r : roots) {
         dfsFrom(
-            paths[r].upperEnd(), [](node) {},
+            paths[r].upperEnd(), [](node) {return DynamicForest::ReturnState::CONTINUE;},
             [&](node u) {
                 if (parent(u) != none) {
                     assert(u < path_membership.size());
                     assert(parent(u) < path_membership.size());
                     result.addEdge(u, parent(u));
                 }
+                return DynamicForest::ReturnState::CONTINUE;
             });
     }
 
