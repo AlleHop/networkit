@@ -8,6 +8,7 @@ from libcpp cimport bool as bool_t
 from libcpp.vector cimport vector
 from libcpp.utility cimport pair
 from libcpp.map cimport map
+from libcpp cimport nullptr
 
 import os
 import math
@@ -1121,11 +1122,11 @@ cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>":
 
 	cdef cppclass _QuasiThresholdEditingLocalMover "NetworKit::QuasiThresholdMoving::QuasiThresholdEditingLocalMover"(_Algorithm):
 		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, bool_t moveSubtrees, bool_t subtreeSortPaths, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost) except +
-		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, bool_t moveSubtrees, bool_t subtreeSortPaths, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost, vector[vector[int64_t]] editCostMatrix) except +
-		count getNumberOfEdits() const
-		count getCostOfEdits() const
-		count getUsedIterations() const
-		count getPlateauSize() const
+		_QuasiThresholdEditingLocalMover(_Graph G, _Initialization initialization, count maxIterations, bool_t sortPaths, bool_t randomness, bool_t moveSubtrees, bool_t subtreeSortPaths, count maxPlateauSize, bool_t useBucketQueue, count insertEditCost, count removeEditCost, vector[vector[int64_t]] *editCostMatrix) except +
+		count getNumberOfEdits() except +
+		count getCostOfEdits() except +
+		count getUsedIterations() except +
+		count getPlateauSize() except +
 		_Graph getQuasiThresholdGraph() except +
 		_Graph getDynamicForestGraph() except +
 		void setInsertionOrder(vector[node] order) except +
@@ -1133,7 +1134,7 @@ cdef extern from "<networkit/community/QuasiThresholdEditingLocalMover.hpp>":
 
 cdef class QuasiThresholdEditingLocalMover(Algorithm):
 	cdef Graph _G
-	cdef vector[vector[int64_t]] _default
+	cdef vector[vector[int64_t]] _editCostMatrix
 
 
 	Trivial = _Initialization.TRIVIAL
@@ -1144,10 +1145,11 @@ cdef class QuasiThresholdEditingLocalMover(Algorithm):
 	UserDefindedInsert = _Initialization.USER_DEFINED_INSERT
 	RandomTree = _Initialization.RANDOM_TREE
 
-	def __cinit__(self, Graph G, _Initialization initialization = _Initialization.TRIVIAL, count maxIterations = 5, bool_t sortPaths = True, bool_t randomness = False, bool_t moveSubtrees = False, bool_t subtreeSortPaths = False, count maxPlateauSize = 4, bool_t useBucketQueue = True, count insertEditCost = 1, count removeEditCost = 1,  editCostMatrix = None ):
+	def __cinit__(self, Graph G not None, _Initialization initialization = _Initialization.TRIVIAL, count maxIterations = 5, bool_t sortPaths = True, bool_t randomness = False, bool_t moveSubtrees = False, bool_t subtreeSortPaths = False, count maxPlateauSize = 4, bool_t useBucketQueue = True, count insertEditCost = 1, count removeEditCost = 1,  editCostMatrix = None ):
 		self._G = G
 		if editCostMatrix is not None:
-			self._this = new _QuasiThresholdEditingLocalMover(G._this, initialization, maxIterations, sortPaths, randomness, moveSubtrees, subtreeSortPaths, maxPlateauSize, useBucketQueue, insertEditCost, removeEditCost, editCostMatrix)
+			self._editCostMatrix = editCostMatrix
+			self._this = new _QuasiThresholdEditingLocalMover(G._this, initialization, maxIterations, sortPaths, randomness, moveSubtrees, subtreeSortPaths, maxPlateauSize, useBucketQueue, insertEditCost, removeEditCost, &(self._editCostMatrix))
 		else:
 			self._this = new _QuasiThresholdEditingLocalMover(G._this, initialization, maxIterations, sortPaths, randomness, moveSubtrees, subtreeSortPaths, maxPlateauSize, useBucketQueue, insertEditCost, removeEditCost)
 
