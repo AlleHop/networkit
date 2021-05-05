@@ -208,6 +208,9 @@ private:
     std::vector<node> parentQueue;
     std::vector<int64_t> editCostSubtree;
     count subtreeExtDegree = 0;
+    double ratioSubtreeNeighbors;
+    double ratioParentCandidates;
+    count countSubtreeMoves;
 
     std::vector<bool> existing;
 

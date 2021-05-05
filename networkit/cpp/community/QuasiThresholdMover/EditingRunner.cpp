@@ -134,6 +134,10 @@ EditingRunner::EditingRunner(const Graph &G,
         level = 0;
     }
 
+    ratioParentCandidates = 0;
+    ratioSubtreeNeighbors = 0;
+    countSubtreeMoves = 0;
+
     numEdits = countNumberOfEdits();
     costEdits = countCostOfEdits();
     editsBefore = numEdits;
@@ -191,6 +195,7 @@ void EditingRunner::runLocalMover() {
             //local move in random order
             G.forNodesInRandomOrder([&](node nodeToMove) { localMove(nodeToMove); });
             INFO("Iteration: ", i, " edits: ", numEdits, " moved nodes: ", numNodesMoved, " subtrees moved: ", numSubtreeMoves);
+            INFO("RatioSubtreeNeighbors: ", ratioSubtreeNeighbors, " RatioParentCandidates: ", ratioParentCandidates);
         }
 
         timer.stop();
@@ -531,7 +536,7 @@ void EditingRunner::localMove(node nodeToMove) {
         assert(costEdits == countCostOfEdits());
 #endif
     }
-
+    // cleanup for linear move
     for (node u : touchedNodes) {
         lastVisitedDFSNode[u] = u;
         nodeTouched[u] = false;
@@ -541,7 +546,7 @@ void EditingRunner::localMove(node nodeToMove) {
     if(moveSubtrees && !insertRun){
         subtreeMove(nodeToMove);
     }
-    // cleanup for linear move
+    // cleanup for subtreemove move
     for (node u : touchedNodes) {
         lastVisitedDFSNode[u] = u;
         nodeTouched[u] = false;
@@ -551,7 +556,6 @@ void EditingRunner::localMove(node nodeToMove) {
     }
     neighbors.clear();
     touchedNodes.clear();
-
 }
 
 void EditingRunner::subtreeMove(node nodeToMove){
@@ -671,6 +675,12 @@ void EditingRunner::subtreeMove(node nodeToMove){
                     parentCandidates.push_back(v);
                 }
         };
+
+        double curRatioSubtreeNeighbors = subtreeNeighbors.size() * 1.0 / G.numberOfNodes();
+        double curRatioParentCandidates = parentCandidates.size() * 1.0 / G.numberOfNodes();
+        countSubtreeMoves ++;
+        ratioSubtreeNeighbors = ratioSubtreeNeighbors + (curRatioSubtreeNeighbors - ratioSubtreeNeighbors) / countSubtreeMoves;
+        ratioParentCandidates = ratioParentCandidates + (curRatioParentCandidates - ratioParentCandidates) / countSubtreeMoves;
 
         if (useBucketQueue) {
             bucketQueue.fill(parentCandidates, dynamicForest);
@@ -818,12 +828,13 @@ void EditingRunner::subtreeMove(node nodeToMove){
             lastVisitedDFSNode[u] = u;
             nodeTouched[u] = false;
         }
+        for (node u : subtreeNeighbors) {
+            numNeighborsAll[u] = 0;
+        }
 
         parentCandidates.clear();
         touchedNodes.clear();
-        //TODO Optimize: only reset necessary values
         subtreeNeighbors.clear();
-        std::fill(numNeighborsAll.begin(), numNeighborsAll.end(), 0);
     }
     for (node v : subtreeNodes) {
         inSubtree[v] = false;
