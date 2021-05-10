@@ -1618,4 +1618,20 @@ TEST_F(CommunityGTest, benchQuasiThresholdMoverSubtreeMove) {
   INFO(used," Number of Edits");
   INFO(usedCost, " Cost of Edits");
 }
+
+TEST_F(CommunityGTest, benchQuasiThresholdMoverSubtreeMoveUniform) {
+  std::string graphName, graphPath, weightPath;
+  std::cout << "[INPUT] Bio Graph Name >" << std::endl;
+  std::getline(std::cin, graphName);
+  Aux::Random::setSeed(42, true);
+  graphPath = "../input/biological/graphs/" + graphName + ".graph";
+  Graph G = METISGraphReader().read(graphPath);
+
+  QuasiThresholdMoving::QuasiThresholdEditingLocalMover mover(G, QuasiThresholdMoving::QuasiThresholdEditingLocalMover::TRIVIAL, 400, true, true, true, true, 100UL, true,1,2);
+  mover.run();  
+  count used = mover.getNumberOfEdits();
+  count usedCost = mover.getCostOfEdits();
+  INFO(used," Number of Edits");
+  INFO(usedCost, " Cost of Edits");
+}
 } /* namespace NetworKit */
