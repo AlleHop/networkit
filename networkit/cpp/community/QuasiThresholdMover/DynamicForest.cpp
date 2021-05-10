@@ -382,6 +382,9 @@ void DynamicForest::moveToAnyPosition(node u, const std::vector<node> &adoptedCh
     std::vector<node> oldChildren;
     node oldParent = none;
     // place all children below node
+    if(adoptedChildren.empty()){
+        return;
+    }
     if (u != none && !isLowerEnd(u) && adoptedChildren.size() > 0) {
         splitPath(oldPath, path_pos[u]);
         oldPath = path(u);

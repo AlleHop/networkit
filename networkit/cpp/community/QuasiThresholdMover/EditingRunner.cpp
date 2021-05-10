@@ -53,9 +53,8 @@ EditingRunner::EditingRunner(const Graph &G,
 
     //check if edit Matrix has correct size
     editMatrixUsed = (editCostMatrix.size() != 0 && editCostMatrix.size() == G.upperNodeIdBound() );
-    /*if(editMatrixUsed){
-        G = getGraphFromEditMatrix();
-    }*/
+
+    avgDegree =(2.0 * G.numberOfEdges())/G.numberOfNodes();
 
     timer.start();
     switch (initialization) {
@@ -563,8 +562,10 @@ void EditingRunner::subtreeMove(node nodeToMove){
     savedEditCosts = 0;
     for( subtreeOption = 0; subtreeOption < 4 && savedEditCosts == 0 ; subtreeOption ++){
         subtreeSize = 0;
+        subtreeDegree = 0.0;
         bestEdits = 0;
         bestEditCosts = 0;
+        bool moveWithSubtree = true;
         //subtreeOption = 1;
         if(subtreeOption == 2 || subtreeOption == 3){
             dynamicForest.moveNodeToLowerEnd(nodeToMove, marker);
@@ -585,21 +586,23 @@ void EditingRunner::subtreeMove(node nodeToMove){
         //calculate subtree size and nodes in subtree
         dynamicForest.dfsFrom(nodeToMove, [&](node c) {
             subtreeSize++;
+            subtreeDegree += G.degree(c);
             inSubtree[c] = true;
             subtreeNodes.push_back(c);
-            if(subtreeSize > std::max(50.0,sqrt(G.numberOfNodes()))){
+            moveWithSubtree = !(subtreeSize > std::max(50.0,sqrt(G.numberOfNodes())) || subtreeDegree > (avgDegree * std::max(50.0,sqrt(G.numberOfNodes()))));
+            if(!moveWithSubtree){
                 return DynamicForest::ReturnState::BREAK;
             } else {
                 return DynamicForest::ReturnState::CONTINUE;
             }
 		}, [](node) {return DynamicForest::ReturnState::CONTINUE;});
         TRACE("Subtreesize:", subtreeSize);
-        if(subtreeSize > std::max(50.0,sqrt(G.numberOfNodes()))){
+        if(!moveWithSubtree && (subtreeOption == 1 || subtreeOption == 3) && !curChildren.empty()){
             dynamicForest.moveToAnyPosition(nodeToMove, curChildren);
         }
 
     //subtreeMove when subtree is more than one node
-    if(subtreeSize > 1  && subtreeSize <= std::max(50.0,sqrt(G.numberOfNodes()))){
+    if(subtreeSize > 1 && moveWithSubtree){
         generation++;
         subtreeExtDegree = 0;
         editCostNeighbors = 0;
@@ -811,7 +814,9 @@ void EditingRunner::subtreeMove(node nodeToMove){
             std::vector<node> nodeToMoveVec { nodeToMove };
             TRACE("SubtreeMove: current Parent: ", curParent, " new Parent: ", rootData.bestParentBelow);
             dynamicForest.moveToAnyPosition(rootData.bestParentBelow, nodeToMoveVec);
-            dynamicForest.moveToAnyPosition(nodeToMove, bestChildren);
+            if(!bestChildren.empty()){
+                dynamicForest.moveToAnyPosition(nodeToMove, bestChildren);
+            }
             hasMoved |= (savedEditCosts > 0 || (randomness && rootEqualBestParentsCpy > 1));
             numNodesMoved += (savedEditCosts > 0 || (randomness && rootEqualBestParentsCpy > 1));
             numSubtreeMoves += (savedEditCosts > 0 || (randomness && rootEqualBestParentsCpy > 1));

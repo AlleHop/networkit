@@ -211,6 +211,8 @@ private:
     double ratioSubtreeNeighbors;
     double ratioParentCandidates;
     count countSubtreeMoves;
+    double avgDegree;
+    double subtreeDegree;
 
     std::vector<bool> existing;
 
