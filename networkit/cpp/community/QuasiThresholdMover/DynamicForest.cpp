@@ -131,7 +131,6 @@ void DynamicForest::isolatePath(pid sp) {
     if (oldChildren.empty() && oldParent != none && paths[oldParent].childPaths.size() == 1) {
         pid child = paths[oldParent].childPaths[0];
         unionPaths(oldParent, child);
-        updateDepthInSubtree(child);
     } else {
         for (pid child : oldChildren) {
             setParentPath(child, oldParent);
@@ -292,6 +291,7 @@ void DynamicForest::unionPaths(pid upperPath, pid lowerPath) {
     paths[upperPath].childPaths.pop_back();
     paths[lowerPath].parent = upperParent;
     paths[lowerPath].posInParent = upperPos;
+    paths[lowerPath].depth = paths[upperPath].depth;
     if (upperParent != none) {
         paths[upperParent].childPaths[upperPos] = lowerPath;
     } else {
@@ -379,34 +379,32 @@ void DynamicForest::moveToPosition(node u, node p, const std::vector<node> &adop
 
 void DynamicForest::moveToAnyPosition(node u, const std::vector<node> &adoptedChildren) {
     pid oldPath = path(u);
-    std::vector<node> oldChildren;
     node oldParent = none;
     // place all children below node
     if(adoptedChildren.empty()){
         return;
     }
-    if (u != none && !isLowerEnd(u) && adoptedChildren.size() > 0) {
+    if (u != none && !isLowerEnd(u)) {
         splitPath(oldPath, path_pos[u]);
         oldPath = path(u);
     }
     if(u == none || isLowerEnd(u)){
+        oldParent = parent(adoptedChildren[0]);
         for (node child : adoptedChildren) {
-            oldParent = parent(child);
             if(!isUpperEnd(child)){
                 splitPath(path(child), path_pos[oldParent]);
             }
             setParentPath(path(child), path(u));
-            oldChildren = children(oldParent);
         }
         if(u != none && paths[path(u)].childPaths.size() == 1 && adoptedChildren.size() == 1){
             unionPaths(path(u), path(adoptedChildren[0]));
         }
-        if(oldParent != none && paths[path(oldParent)].childPaths.size() == 1){
-            unionPaths(path(oldParent), path(oldChildren[0]));
+        if(oldParent != none) {
+            const auto &childPaths = paths[path(oldParent)].childPaths;
+            if (childPaths.size() == 1){
+                unionPaths(path(oldParent), childPaths[0]);
+            }
         }
-    }
-    if(oldParent != none){
-        updateDepthInSubtree(path(oldParent));
     }
     updateDepthInSubtree(path(u));
     assert(pathsValid());
