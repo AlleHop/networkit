@@ -410,6 +410,63 @@ void DynamicForest::moveToAnyPosition(node u, const std::vector<node> &adoptedCh
     assert(pathsValid());
 }
 
+void DynamicForest::moveSubtreeToPosition(node u, node p, const std::vector<node> &adoptedChildren) {
+    pid oldPath = path(u);
+    pid parentPath = path(p);
+    node oldParent = none;
+#ifndef NDEBUG
+    // check that all children are adopted ones
+    assert(childCount(u) > 0);
+    if (p != none) {
+        std::vector<node> oldChildren = children(p);
+        for (node c : adoptedChildren) {
+            assert(std::find(oldChildren.begin(), oldChildren.end(), c) != oldChildren.end());
+        }
+    } else {
+        for (node c : adoptedChildren) {
+            assert(std::find(roots.begin(), roots.end(), path(c)) != roots.end());
+        }
+    }
+#endif
+    if (p != none && !isLowerEnd(p)) {
+        splitPath(parentPath, path_pos[p]);
+        parentPath = path(p);
+    }
+    assert(p == none || isLowerEnd(p));
+    oldParent = parent(u);
+    if(!isUpperEnd(u)){
+        splitPath(path(u), path_pos[oldParent]);
+    }
+    setParentPath(path(u), path(p));
+    if(p != none && paths[path(p)].childPaths.size() == 1){
+        unionPaths(path(p), path(u));
+    }
+    if(oldParent != none) {
+        const auto &childPaths = paths[path(oldParent)].childPaths;
+        if (childPaths.size() == 1){
+            unionPaths(path(oldParent), childPaths[0]);
+        }
+    }
+    if(!adoptedChildren.empty()){
+        if (u != none && !isLowerEnd(u)) {
+            splitPath(oldPath, path_pos[u]);
+            oldPath = path(u);
+        }
+        assert(u == none || isLowerEnd(u));
+        for (node child : adoptedChildren) {
+            setParentPath(path(child), path(u));
+        }
+        if(p != none) {
+            const auto &childPaths = paths[path(p)].childPaths;
+            if (childPaths.size() == 1){
+                unionPaths(path(p), childPaths[0]);
+            }
+        }
+    }
+    updateDepthInSubtree(path(u));
+    assert(pathsValid());
+}
+
 bool DynamicForest::pathsValid() {
   #ifndef NDEBUG
     // check that parent/child relations for paths are valid

@@ -21,6 +21,7 @@ public:
     void moveNodeToLowerEnd(node referenceNode, const std::vector<bool> &marker);
     void moveToPosition(node u, node p, const std::vector<node> &adoptedChildren);
     void moveToAnyPosition(node u, const std::vector<node> &adoptedChildren);
+    void moveSubtreeToPosition(node u, node p, const std::vector<node> &adoptedChildren);
     Graph toGraph() const;
     std::string printPaths() const;
 

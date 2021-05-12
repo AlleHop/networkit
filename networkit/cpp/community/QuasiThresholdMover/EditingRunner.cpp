@@ -811,12 +811,8 @@ void EditingRunner::subtreeMove(node nodeToMove){
         TRACE("Best adopted Children for Subtree ", bestChildren);
         if (savedEditCosts > 0 || randomness || subtreeOption == 1 || subtreeOption == 3) {
             assert(savedEditCosts >= 0);
-            std::vector<node> nodeToMoveVec { nodeToMove };
             TRACE("SubtreeMove: current Parent: ", curParent, " new Parent: ", rootData.bestParentBelow);
-            dynamicForest.moveToAnyPosition(rootData.bestParentBelow, nodeToMoveVec);
-            if(!bestChildren.empty()){
-                dynamicForest.moveToAnyPosition(nodeToMove, bestChildren);
-            }
+            dynamicForest.moveSubtreeToPosition(nodeToMove, rootData.bestParentBelow, bestChildren);
             hasMoved |= (savedEditCosts > 0 || (randomness && rootEqualBestParentsCpy > 1));
             numNodesMoved += (savedEditCosts > 0 || (randomness && rootEqualBestParentsCpy > 1));
             numSubtreeMoves += (savedEditCosts > 0 || (randomness && rootEqualBestParentsCpy > 1));
