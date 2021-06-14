@@ -660,24 +660,28 @@ void EditingRunner::subtreeMove(node nodeToMove){
             //not necessary for children because they are moved and edits dont change
         }
 
-        //subtree sortPath
-        if (subtreeSortPaths) {
-            node nonSubtreeNeighbor;
-            for (node v : subtreeNeighbors) {
-                nonSubtreeNeighbor = dynamicForest.moveUpSubtreeNeighbor(v, nodeToMove);
-            }
-        }
         //add parent candidates to queue
         //TODO get rid of forNodes?
         for (node v : subtreeNeighbors)  {
                 int64_t testEditCost = ((numNeighborsAll[v] * removeEditCost) + ((numNeighborsAll[v] - subtreeSize) * insertEditCost));
                 //fill queue with candidates with positive editCost or neighbors of nodetomove
-                if ( marker[v] || 
-                    (!editMatrixUsed && (testEditCost >= 0)) ||
+                if(marker[v]){
+                    parentCandidates.push_back(v);
+                }
+                else if ((!editMatrixUsed && (testEditCost >= 0)) ||
                     (editMatrixUsed && editCostSubtree[v] >= 0)) {
+                    posSubtreeNeighbors.push_back(v);
                     parentCandidates.push_back(v);
                 }
         };
+
+                //subtree sortPath
+        if (subtreeSortPaths) {
+            node nonSubtreeNeighbor;
+            for (node v : posSubtreeNeighbors) {
+                nonSubtreeNeighbor = dynamicForest.moveUpSubtreeNeighbor(v, nodeToMove);
+            }
+        }
 
         double curRatioSubtreeNeighbors = subtreeNeighbors.size() * 1.0 / G.numberOfNodes();
         double curRatioParentCandidates = parentCandidates.size() * 1.0 / G.numberOfNodes();
@@ -836,6 +840,7 @@ void EditingRunner::subtreeMove(node nodeToMove){
         parentCandidates.clear();
         touchedNodes.clear();
         subtreeNeighbors.clear();
+        posSubtreeNeighbors.clear();
     }
     for (node v : subtreeNodes) {
         inSubtree[v] = false;

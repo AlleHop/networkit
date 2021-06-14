@@ -202,6 +202,7 @@ private:
     count subtreeOption;
     std::vector<bool> inSubtree;
     std::vector<node> subtreeNeighbors;
+    std::vector<node> posSubtreeNeighbors;
     std::vector<count> numNeighborsAll;
     std::vector<node> subtreeNodes;
     std::vector<node> parentCandidates;
